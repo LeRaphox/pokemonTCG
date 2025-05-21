@@ -13,7 +13,7 @@ public interface IJeu {
     String getNomDuGagnant();
 
     void passerAEteChoisi();
-    void uneCarteDeLaMainAEteChoisie(String carteEnMain);
+    void uneCarteDeLaMainAEteChoisie(String idCarteChoisie);
     void unEmplacementVideDuBancAEteChoisi(String indiceBanc);
     void uneAttaqueAEteChoisie(String attaque);
     void retraiteAEteChoisie();
