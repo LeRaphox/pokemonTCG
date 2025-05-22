@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  * <li>une Carte Pokémon qui représente l'espèce du pokémon
  * <li>la liste des cartes qui lui sont associées : cartes pokémon (incluant les
  * niveaux précédents s'il s'agit d'une évolution), cartes énergie et
- * éventuellement des outils)
+ * éventuellement des outils
  * <li>les variables supplémentaires décrivant son état (dégâts, statuts, etc.)
  * </ul>
  */
@@ -191,12 +191,12 @@ public class Pokemon implements IPokemon {
      * Teste si un pokémon a assez d'énergie attachée pour payer un coût donné.
      * <p>
      * Le coût est passé sous la forme d'un dictionnaire. Les types d'énergie autres
-     * que {@code INCOLORE} sont comparées directement au nombre de carte de ce type
+     * que {@code INCOLORE} sont comparées directement au nombre de cartes de ce type
      * attachées au pokémon. Le coût en énergie {@code INCOLORE} est testé en
      * comptant le nombre total de cartes énergie attachées.
      * 
      * @param coutEnergie le coût à payer, sous la forme d'un dictionnaire associant
-     *                    à un type d'énergie le nombre d'énergie de ce type à payer
+     *                    à un type d'énergie le nombre d'énergies de ce type à payer
      * @return {@code true} si le pokémon peut payer le coût, {@code false} sinon
      */
     public boolean peutPayerCout(Map<Type, Integer> coutEnergie) {

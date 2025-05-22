@@ -60,7 +60,7 @@ public class VueChoixJoueurs extends Stage {
     }
 
     /**
-     * Retourne le nom que l'utilisateur a renseigné pour le ième participant à la partie
+     * Retourne le nom que l'utilisateur a renseigné pour l'ième participant à la partie
      * @param playerNumber : le numéro du participant
      */
     protected String getJoueurParNumero(int playerNumber) {
