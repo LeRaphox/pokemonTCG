@@ -15,13 +15,13 @@ public interface IJeu {
     void passerAEteChoisi();
     void uneCarteDeLaMainAEteChoisie(String idCarteChoisie);
     void unEmplacementVideDuBancAEteChoisi(String indiceBanc);
-    void uneAttaqueAEteChoisie(String attaque);
+    void uneAttaqueAEteChoisie(String nomAttaque);
     void retraiteAEteChoisie();
     void melangerAEteChoisi();
     void ajouterAEteChoisi();
     void defausserEnergieAEteChoisi();
     void defausserEnergieNAPasEteChoisi();
-    void uneCarteEnergieAEteChoisie(String energie);
-    void uneCarteComplementaireAEteChoisie(String cartecomplementaire);
+    void uneCarteEnergieAEteChoisie(String idCarteEnergie);
+    void uneCarteComplementaireAEteChoisie(String idCartecomplementaire);
 
 }
