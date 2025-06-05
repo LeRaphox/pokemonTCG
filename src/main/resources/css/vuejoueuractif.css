@@ -1,0 +1,9 @@
+/* Style de base pour tous les textes de VueJoueurActif */
+.label {
+    -fx-font-size: 18px;
+    font-size: 18px;
+}
+.button {
+    -fx-font-size: 18px;
+    font-size: 18px;
+}
