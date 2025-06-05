@@ -2,12 +2,13 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.control.Button?>
 <VBox xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1">
     <children>
         <Label fx:id="nomDuJoueur" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
         <HBox spacing="10" alignment="CENTER_LEFT">
             <Label text="Pokémon actif :" style="-fx-font-size: 16px;" />
-            <Label fx:id="pokemonActif" style="-fx-font-size: 18px;" />
+            <Button fx:id="pokemonActif" style="-fx-font-size: 18px;" />
         </HBox>
 
         <HBox fx:id="panneauBanc" spacing="5" alignment="CENTER_LEFT" />

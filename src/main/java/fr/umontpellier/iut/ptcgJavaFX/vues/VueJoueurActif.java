@@ -27,7 +27,7 @@ import fr.umontpellier.iut.ptcgJavaFX.IPokemon;
 
 public class VueJoueurActif extends VBox {
     @FXML private Label nomDuJoueur;
-    @FXML private Label pokemonActif;
+    @FXML private Button pokemonActif;
     @FXML private HBox panneauMain;
     @FXML private HBox panneauBanc;
     private ObjectProperty<? extends IJoueur> joueurActif;
@@ -124,8 +124,10 @@ public class VueJoueurActif extends VBox {
                 nomPokemon = poke.getCartePokemon().getNom();
             }
             pokemonActif.setText(nomPokemon);
+
         } else {
             pokemonActif.setText("");
+            pokemonActif.setOnAction(null); // enlever l'action s'il n'y a pas de pokemon ne pas enelvre
         }
     }
 

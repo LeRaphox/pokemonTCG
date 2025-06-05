@@ -1,4 +1,4 @@
-/* Style de base pour tous les textes de VueJoueurActif */
+/* Style de base pour tous les textes de VueJoueurActif a Amelliaurer */
 .label {
     -fx-font-size: 18px;
     font-size: 18px;
@@ -6,4 +6,11 @@
 .button {
     -fx-font-size: 18px;
     font-size: 18px;
+}
+
+#pokemonActif {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-background-color: #cce6ff;
+    -fx-text-fill: #001e3b;
 }
