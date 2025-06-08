@@ -3,6 +3,7 @@ package fr.umontpellier.iut.ptcgJavaFX.vues;
 import fr.umontpellier.iut.ptcgJavaFX.IJeu;
 import fr.umontpellier.iut.ptcgJavaFX.ICarte;
 import fr.umontpellier.iut.ptcgJavaFX.IJoueur;
+import fr.umontpellier.iut.ptcgJavaFX.vues.VueJoueurActif;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -26,8 +27,8 @@ import java.io.IOException;
 public class VueDuJeu extends javafx.scene.layout.VBox {
 
     private IJeu jeu;
-    @FXML
-    private javafx.scene.control.Label instructionLabel;
+    @FXML private VueAdversaire panneauAdversaire;
+    @FXML private javafx.scene.control.Label instructionLabel;
     @FXML private VueJoueurActif panneauDuJoueurActif;
     @FXML private Button boutonPasser;
 

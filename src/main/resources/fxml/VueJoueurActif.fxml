@@ -10,8 +10,18 @@
             <Label text="Pokémon actif :" style="-fx-font-size: 16px;" />
             <Button fx:id="pokemonActif" style="-fx-font-size: 18px;" />
         </HBox>
+        <HBox spacing="5" alignment="CENTER_LEFT">
+            <Label text="Énergies :" style="-fx-font-size: 14px; -fx-text-fill: #666;" />
+            <HBox fx:id="panneauEnergies" spacing="3" alignment="CENTER_LEFT" />
+        </HBox>
 
-        <HBox fx:id="panneauBanc" spacing="5" alignment="CENTER_LEFT" />
-        <HBox fx:id="panneauMain" spacing="5" alignment="CENTER_LEFT" />
+        <VBox spacing="5" style="-fx-padding: 5px; -fx-border-color: #999; -fx-border-width: 1px; -fx-border-radius: 5px; -fx-background-color: #f5f5f5;">
+            <Label text="Banc" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-padding: 0 0 5 0;" />
+            <HBox fx:id="panneauBanc" spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 5px; -fx-background-color: #eee; -fx-border-radius: 3px; -fx-min-height: 50px;" />
+        </VBox>
+        <VBox spacing="5" style="-fx-padding: 5px; -fx-border-color: #999; -fx-border-width: 1px; -fx-border-radius: 5px; -fx-background-color: #f5f5f5;">
+            <Label text="Main" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-padding: 0 0 5 0;" />
+            <HBox fx:id="panneauMain" spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 5px; -fx-background-color: #eee; -fx-border-radius: 3px; -fx-min-height: 50px;" />
+        </VBox>
     </children>
 </VBox>

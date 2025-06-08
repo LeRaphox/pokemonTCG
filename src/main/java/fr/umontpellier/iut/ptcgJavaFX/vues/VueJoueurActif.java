@@ -3,8 +3,10 @@ package fr.umontpellier.iut.ptcgJavaFX.vues;
 import javafx.scene.layout.VBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
-import fr.umontpellier.iut.ptcgJavaFX.IJeu;
+import javafx.geometry.Pos;
 import fr.umontpellier.iut.ptcgJavaFX.IJoueur;
+import fr.umontpellier.iut.ptcgJavaFX.IPokemon;
+import fr.umontpellier.iut.ptcgJavaFX.IJeu;
 import fr.umontpellier.iut.ptcgJavaFX.ICarte;
 import javafx.beans.property.ObjectProperty;
 import javafx.fxml.FXML;
@@ -18,11 +20,6 @@ import java.util.List;
 
 import static java.util.Comparator.comparing;
 
-
-/**
- * Cette classe présente les éléments appartenant au joueur Actif.
- * On y définit les bindings sur le joueur Actif, ainsi que le listener à exécuter lorsque ce joueur change
- */
 import fr.umontpellier.iut.ptcgJavaFX.IPokemon;
 
 public class VueJoueurActif extends VBox {
@@ -30,9 +27,25 @@ public class VueJoueurActif extends VBox {
     @FXML private Button pokemonActif;
     @FXML private HBox panneauMain;
     @FXML private HBox panneauBanc;
+    @FXML private HBox panneauEnergies;
     private ObjectProperty<? extends IJoueur> joueurActif;
     private IJeu jeu;
 
+    private String getCouleurEnergie(String type) {
+        if (type == null) {
+            return "#cccccc";
+        }
+        return switch (type) {
+            case "Feu" -> "#ff9999";
+            case "Eau" -> "#99ccff";
+            case "Plante" -> "#99ff99";
+            case "Électrique" -> "#ffff99";
+            case "Psy" -> "#ff99ff";
+            case "Combat" -> "#ffcc99";
+            default -> "#cccccc";
+        };
+    }
+    
     public void bindJeu(IJeu jeu) {
         this.jeu = jeu;
         bindJoueurActif();
@@ -78,56 +91,160 @@ public class VueJoueurActif extends VBox {
 
     private void placerMain() {
         panneauMain.getChildren().clear();
-
-        if (joueurActif.get() == null) return;
+        if (joueurActif.get() == null) {
+            System.out.println("Aucun joueur actif");
+            return;
+        }
+        
+        // creation d'une copie
         List<? extends ICarte> main = new ArrayList<>(joueurActif.get().getMain());
         main.sort(comparing(ICarte::getNom));
-        System.out.println("main " + main.size());
-        for (ICarte carte : main) {
-            Button btn = new Button(carte.getNom());
-            btn.setStyle("-fx-font-size: 18px;");
-            btn.setOnAction(e -> jeu.uneCarteDeLaMainAEteChoisie(carte.getId()));
-            panneauMain.getChildren().add(btn);
-        }
+        
+        System.out.println("=== MAIN DU JOUEUR ===");
+        System.out.println("Nombre de cartes dans la main: " + main.size());
+        main.forEach(c -> System.out.println("- " + c.getNom() + " (Type: " + 
+            (c.getTypeEnergie() != null ? c.getTypeEnergie().name() : "Non-Énergie") + ")"));
+        System.out.println("=====================");
+        
+        // creation d'un bouton pour chaque carte
+        main.forEach(carte -> {
+            if (carte != null) {
+                Button btn = new Button(carte.getNom());
+                
+
+                String style = "-fx-font-size: 14px;" +
+                             "-fx-padding: 5px 10px;" +
+                             "-fx-margin: 0 2px;" +
+                             "-fx-background-radius: 10;";
+                
+                //style que pour les cartes energies
+                if (carte.getTypeEnergie() != null) {
+                    String typeEnergie = carte.getTypeEnergie().name();
+                    style += "-fx-background-color: " + getCouleurEnergie(typeEnergie) + ";" +
+                             "-fx-text-fill: white;" +
+                             "-fx-font-weight: bold;";
+                    
+                    // pour les cartes energies on appele uneCarteEnergieAeteChosiie
+                    btn.setOnAction(e -> {
+                        if (joueurActif.get().pokemonActifProperty().get() != null) {
+                            jeu.uneCarteEnergieAEteChoisie(carte.getId());
+                            // metre a jour l'affichage
+                            placerPokemonActif();
+                        } else {
+                            // s'il y a aucun pokmeon actif on affiche un message
+                            jeu.instructionProperty().set("Aucun pokémon actif !!");
+                        }
+                    });
+                } else {
+                    // pour les autres cartes rien
+                    btn.setOnAction(e -> jeu.uneCarteDeLaMainAEteChoisie(carte.getId()));
+                }
+                
+                btn.setStyle(style);
+                panneauMain.getChildren().add(btn);
+            }
+        });
     }
 
     private void placerBanc() {
         panneauBanc.getChildren().clear();
-        if (joueurActif.get() == null) return;
-        List<? extends IPokemon> banc = new ArrayList<>(joueurActif.get().getBanc());
-        //pour debug
-
-        System.out.println("banc " + banc.size());
-        for (int i = 0; i < banc.size(); i++) {
-            IPokemon pokemon = banc.get(i);
+        if (joueurActif.get() == null) {
+            System.out.println("Aucun joueur actif pour afficher le banc");
+            return;
+        }
+        
+        // Nombre d'emplacements de banc disponibles (5 dans Pokémon TCG)
+        int nombreEmplacementsBanc = 5;
+        
+        // Créer un bouton pour chaque emplacement de banc
+        for (int i = 0; i < nombreEmplacementsBanc; i++) {
+            VBox emplacement = new VBox();
+            emplacement.setAlignment(Pos.CENTER);
+            emplacement.setStyle(
+                "-fx-border-color: #999;" +
+                "-fx-border-radius: 5;" +
+                "-fx-padding: 5px;" +
+                "-fx-min-width: 80px;" +
+                "-fx-min-height: 40px;"
+            );
             
-            //ssi le pokemon n'existe pas on continue sinon ça pla,nte meme avec le if d'en bas n'enleve pas cette ligne
-            if (pokemon == null) continue;
-
-            String nomPokemon = "";
-            if (pokemon.getCartePokemon() != null && pokemon.getCartePokemon().getNom() != null) {
-                nomPokemon = pokemon.getCartePokemon().getNom();
+            // verfie qu'il n'y a pas de pokemon a cet emplacement
+            List<? extends IPokemon> banc = new ArrayList<>(joueurActif.get().getBanc());
+            if (i < banc.size() && banc.get(i) != null) {
+                IPokemon pokemon = banc.get(i);
+                String nomPokemon = (pokemon.getCartePokemon() != null) ? 
+                                   pokemon.getCartePokemon().getNom() : "Pokémon " + (i + 1);
+                
+                Label lblPokemon = new Label(nomPokemon);
+                lblPokemon.setStyle("-fx-font-size: 12px; -fx-font-weight: bold;");
+                emplacement.getChildren().add(lblPokemon);
+            } else {
+                // Afficher un emplacement vide cliquable
+                Button btnEmplacement = new Button("Emplacement " + (i + 1));
+                btnEmplacement.setStyle(
+                    "-fx-font-size: 10px;" +
+                    "-fx-text-fill: #666;" +
+                    "-fx-background-color: #f0f0f0;" +
+                    "-fx-border-color: #ccc;" +
+                    "-fx-border-radius: 3;"
+                );
+                
+                int idx = i;
+                btnEmplacement.setOnAction(e -> {
+                    System.out.println("Emplacement de banc choisi: " + idx);
+                    jeu.unEmplacementVideDuBancAEteChoisi(String.valueOf(idx));
+                });
+                
+                emplacement.getChildren().add(btnEmplacement);
             }
-            Button btn = new Button(nomPokemon);
-            btn.setStyle("-fx-font-size: 16px;");
-            int idx = i;
-            btn.setOnAction(e -> jeu.unEmplacementVideDuBancAEteChoisi(String.valueOf(idx)));
-            panneauBanc.getChildren().add(btn);
+            
+
+            panneauBanc.getChildren().add(emplacement);
         }
     }
 
     private void placerPokemonActif() {
-        if (joueurActif.get() != null && joueurActif.get().pokemonActifProperty().get() != null) {
-            IPokemon poke = joueurActif.get().pokemonActifProperty().get();
-            String nomPokemon = "";
-            if (poke.getCartePokemon() != null && poke.getCartePokemon().getNom() != null) {
-                nomPokemon = poke.getCartePokemon().getNom();
-            }
-            pokemonActif.setText(nomPokemon);
+        panneauEnergies.getChildren().clear();
+        
+        if (joueurActif.get() == null || joueurActif.get().pokemonActifProperty().get() == null) {
+            pokemonActif.setText("Aucun Pokémon actif");
+            pokemonActif.setStyle(
+                "-fx-font-size: 14px;" +
+                "-fx-text-fill: #666;"
+            );
+            return;
+        }
+        
+        IPokemon poke = joueurActif.get().pokemonActifProperty().get();
+        String nomPokemon = (poke.getCartePokemon() != null && poke.getCartePokemon().getNom() != null) ?
+                           poke.getCartePokemon().getNom() : "Pokémon Actif";
+                           
+        pokemonActif.setText(nomPokemon);
+        pokemonActif.setStyle(
+            "-fx-font-size: 16px;" +
+            "-fx-font-weight: bold;"
+        );
+        
 
-        } else {
-            pokemonActif.setText("");
-            pokemonActif.setOnAction(null); // enlever l'action s'il n'y a pas de pokemon ne pas enelvre
+
+        //affiche les energies
+        if (poke.energieProperty() != null) {
+            poke.energieProperty().forEach((type, energies) -> {
+                if (energies != null && !energies.isEmpty()) {
+                    Label lblEnergie = new Label(type + " (" + energies.size() + ")");
+                    lblEnergie.setStyle(
+                        "-fx-background-color: " + getCouleurEnergie(type) + ";" +
+                        "-fx-padding: 2px 8px;" +
+                        "-fx-margin: 0 3px;" +
+                        "-fx-border-radius: 10px;" +
+                        "-fx-background-radius: 10px;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-size: 14px;" +
+                        "-fx-font-weight: bold;"
+                    );
+                    panneauEnergies.getChildren().add(lblEnergie);
+                }
+            });
         }
     }
 
