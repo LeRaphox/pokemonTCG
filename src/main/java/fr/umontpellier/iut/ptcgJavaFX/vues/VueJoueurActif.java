@@ -13,6 +13,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
 import javafx.collections.ListChangeListener;
+import javafx.event.ActionEvent;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -267,5 +268,14 @@ public class VueJoueurActif extends VBox {
         joueur.pokemonActifProperty().addListener((source, ancien, nouveau) -> {
             if (joueur == joueurActif.get()) placerPokemonActif();
         });
+    }
+    
+    @FXML
+    private void piocherCarte(javafx.event.ActionEvent event) {
+        if (jeu != null && joueurActif != null && joueurActif.get() != null) {
+            jeu.passerAEteChoisi();
+
+            placerMain();
+        }
     }
 }

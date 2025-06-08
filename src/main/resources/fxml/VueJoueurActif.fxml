@@ -20,7 +20,10 @@
             <HBox fx:id="panneauBanc" spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 5px; -fx-background-color: #eee; -fx-border-radius: 3px; -fx-min-height: 50px;" />
         </VBox>
         <VBox spacing="5" style="-fx-padding: 5px; -fx-border-color: #999; -fx-border-width: 1px; -fx-border-radius: 5px; -fx-background-color: #f5f5f5;">
-            <Label text="Main" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-padding: 0 0 5 0;" />
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Main" style="-fx-font-weight: bold; -fx-font-size: 14px;" />
+                <Button text="Piocher une carte" onAction="#piocherCarte" style="-fx-font-size: 12px; -fx-padding: 2px 8px;" />
+            </HBox>
             <HBox fx:id="panneauMain" spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 5px; -fx-background-color: #eee; -fx-border-radius: 3px; -fx-min-height: 50px;" />
         </VBox>
     </children>
