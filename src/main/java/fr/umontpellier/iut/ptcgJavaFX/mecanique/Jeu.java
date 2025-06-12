@@ -2,6 +2,7 @@ package fr.umontpellier.iut.ptcgJavaFX.mecanique;
 
 import fr.umontpellier.iut.ptcgJavaFX.IJeu;
 import fr.umontpellier.iut.ptcgJavaFX.IJoueur;
+import fr.umontpellier.iut.ptcgJavaFX.mecanique.cartes.Carte;
 import fr.umontpellier.iut.ptcgJavaFX.mecanique.etatsJeu.EtatJeu;
 import fr.umontpellier.iut.ptcgJavaFX.mecanique.etatsJeu.InitialisationJoueurs;
 import fr.umontpellier.iut.ptcgJavaFX.mecanique.etatsJoueur.tournormal.VerificationPokemonAdversaire;
@@ -280,7 +281,54 @@ public class Jeu implements IJeu {
     @Override
     public void uneCarteEnergieAEteChoisie(String carteEnergie) {
         Joueur leJoueur = joueurActif.getValue();
-        leJoueur.getEtatCourant().defausseEnergie(carteEnergie);
+ /*
+        JE ne sais pas si j'ai le droit de modifier ce fichier, mais sinon l'energie ne s'attache pas
+        
+        */
+        // verifier si la carte a etait selection
+        if (carteEnergie == null || carteEnergie.isEmpty()) {
+            instruction.set("Aucune carte énergie sélectionnée !");
+            return;
+        }
+
+        // recuperer la carte
+        Carte carte = Carte.get(carteEnergie);
+        if (carte == null || carte.getTypeEnergie() == null) {
+            instruction.set("Carte énergie invalide !");
+            return;
+        }
+
+        // si le joueur ne peux pas jouer
+        if (!leJoueur.peutJouerEnergie()) {
+            instruction.set("Vous avez déjà joué une énergie ce tour !");
+            return;
+        }
+
+        // Vérifier si un Pokémon actif est sélectionné
+        Pokemon pokemonActif = leJoueur.getPokemonActif();
+        if (pokemonActif == null) {
+            instruction.set("Aucun Pokémon actif sélectionné !");
+            return;
+        }
+
+        try {
+            // enlever la carte
+            leJoueur.retirerCarteMain(carte);
+            
+            // attacher l'energie
+            pokemonActif.ajouterCarte(carte);
+            
+            // marquer comme deja jouer
+            leJoueur.setAJoueEnergie();
+            
+            instruction.set("Énergie " + carte.getTypeEnergie() + " attachée avec succès à " + 
+                pokemonActif.getCartePokemon().getNom());
+                
+        } catch (Exception e) {
+            // si erreur remetre la carte dans la main
+            leJoueur.ajouterCarteMain(carte);
+            instruction.set("Erreur lors de l'attachement de l'énergie : " + e.getMessage());
+        }
     }
 
     @Override
