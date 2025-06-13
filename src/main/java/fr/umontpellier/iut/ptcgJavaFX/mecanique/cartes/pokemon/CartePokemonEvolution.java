@@ -68,4 +68,7 @@ public abstract class CartePokemonEvolution extends CartePokemon {
     public int getRangComparaison() {
         return niveau;
     }
+
+    // getter necessaire pour l'ihm
+    public String getEvolutionDe() {return evolutionDe;}
 }

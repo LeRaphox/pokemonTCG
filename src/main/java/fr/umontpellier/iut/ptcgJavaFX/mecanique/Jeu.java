@@ -325,7 +325,7 @@ public class Jeu implements IJeu {
                 pokemonActif.getCartePokemon().getNom());
                 
         } catch (Exception e) {
-            // si erreur remetre la carte dans la main
+        // si erreur remetre la carte dans la main
             leJoueur.ajouterCarteMain(carte);
             instruction.set("Erreur lors de l'attachement de l'énergie : " + e.getMessage());
         }

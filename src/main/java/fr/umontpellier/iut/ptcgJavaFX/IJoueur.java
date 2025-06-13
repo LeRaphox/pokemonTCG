@@ -1,5 +1,6 @@
 package fr.umontpellier.iut.ptcgJavaFX;
 
+import fr.umontpellier.iut.ptcgJavaFX.mecanique.etatsJoueur.EtatJoueur;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
@@ -21,5 +22,5 @@ public interface IJoueur {
 
     String getNom();
     IJoueur getAdversaire();
-
+    EtatJoueur getEtatCourant();
 }

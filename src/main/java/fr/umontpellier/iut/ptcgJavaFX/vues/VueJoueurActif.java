@@ -1,19 +1,15 @@
 package fr.umontpellier.iut.ptcgJavaFX.vues;
 
+import fr.umontpellier.iut.ptcgJavaFX.*;
 import javafx.scene.layout.VBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.geometry.Pos;
-import fr.umontpellier.iut.ptcgJavaFX.IJoueur;
-import fr.umontpellier.iut.ptcgJavaFX.IPokemon;
-import fr.umontpellier.iut.ptcgJavaFX.IJeu;
-import fr.umontpellier.iut.ptcgJavaFX.ICarte;
 import javafx.beans.property.ObjectProperty;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
 import javafx.collections.ListChangeListener;
-import javafx.event.ActionEvent;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -23,29 +19,39 @@ import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 
 import static java.util.Comparator.comparing;
 
-import fr.umontpellier.iut.ptcgJavaFX.IPokemon;
+import fr.umontpellier.iut.ptcgJavaFX.mecanique.cartes.pokemon.CartePokemonEvolution;
 
 public class VueJoueurActif extends VBox {
     private String idCarteEnergieSelectionnee = null;
     private List<String> cartesEnergieCompatibles = new ArrayList<>();
-
+    private String carteIdEvolution = null;
+    private String evoltionBN = null;
+    private boolean evoliutionEnCours = false;
     @FXML private Label nomDuJoueur;
     @FXML private Button pokemonActif;
     @FXML private HBox panneauMain;
     @FXML private HBox panneauBanc;
     @FXML private HBox panneauEnergies;
     private ObjectProperty<? extends IJoueur> joueurActif;
-
-
-    //ImageView i = new ImageView("/resources/images/test.png");
-
-
     private IJeu jeu;
 
+    private VueResultats vueResultat; // a initialiser avec le bon PokemonTCGIHM
 
+    public void setJoueur(IJoueur joueur) {
+        this.joueurActif = jeu.joueurActifProperty();
+        if (jeu != null) {
+            vueResultat = new VueResultats((PokemonTCGIHM) jeu);
+            this.getChildren().add(vueResultat);
+        }
+    }
+
+    public void setJeu(IJeu jeu) {
+        this.jeu = jeu;
+    }
 
     private String getCouleurEnergie(String type) {
         if (type == null) {
@@ -110,19 +116,19 @@ public class VueJoueurActif extends VBox {
 
     private boolean estEnergieCompatible(ICarte carteEnergie) {
         if (carteEnergie.getTypeEnergie() == null) return false;
-        
+
         // verifier la compatibilité avec le Pokémon actif
         if (joueurActif.get().pokemonActifProperty().get() != null) {
-            return true; // Simplification: on suppose que tout Pokémon peut recevoir n'importe quelle énergie
+            return true; // simplification: on suppose que tout Pokémon peut recevoir n'importe quelle énergie
         }
-        
+
         // verifier la compatibilité avec les Pokémon sur le banc
         for (IPokemon pokemon : joueurActif.get().getBanc()) {
             if (pokemon != null) {
                 return true; // on suppose que tout Pokémon peut recevoir n'importe quelle énergie
             }
         }
-        
+
         return false;
     }
 
@@ -145,8 +151,8 @@ public class VueJoueurActif extends VBox {
         List<ICarte> autresCartes = main.stream()
                 .filter(c -> c.getTypeEnergie() == null)
                 .collect(Collectors.toList());
-                
-        // Mettre à jour la liste des cartes énergie compatibles
+
+        // mise a jour de la liste des energies compatibles
         cartesEnergieCompatibles = cartesEnergie.stream()
                 .filter(this::estEnergieCompatible)
                 .map(ICarte::getId)
@@ -185,35 +191,36 @@ public class VueJoueurActif extends VBox {
                 return;
             }
 
-            // Vérifier si l'énergie est compatible avec au moins un Pokémon
+            // verifier si l'énergie est compatible avec au moins un Pokémon
             boolean estCompatible = cartesEnergieCompatibles.contains(carte.getId());
-            
-            // Appliquer un style différent selon la compatibilité
+
+            // Appliquer un style différent pour compatibilité
             if (estCompatible) {
                 imageView.setStyle("-fx-cursor: hand; -fx-opacity: 1.0;");
+                final ICarte carteFinale = carte;
                 imageView.setOnMouseClicked(e -> {
-                    idCarteEnergieSelectionnee = carte.getId();
+                    idCarteEnergieSelectionnee = carteFinale.getId();
                     jeu.instructionProperty().set("Cliquez sur un Pokémon pour attacher l'énergie");
-                    
-                    // Mettre en surbrillance les Pokémon cibles valides
+
+                    // Mettre en couleur les Pokémon cibles valides
                     if (pokemonActif.getGraphic() != null) {
                         Node graphic = pokemonActif.getGraphic();
                         if (graphic instanceof Pane) {
                             graphic.setStyle(
-                                "-fx-border-width: 2px; " +
-                                "-fx-border-color: #ffcc00; " +
-                                "-fx-border-radius: 5px;"
+                                    "-fx-border-width: 2px; " +
+                                            "-fx-border-color: #ffcc00; " +
+                                            "-fx-border-radius: 5px;"
                             );
                         }
                     }
-                    
-                    // Mettre en surbrillance les Pokémon du banc
+
+                    // mettre en couleur les Pokémon du banc
                     for (Node node : panneauBanc.getChildren()) {
                         if (node instanceof VBox) {
                             node.setStyle(
-                                "-fx-border-width: 2px; " +
-                                "-fx-border-color: #ffcc00; " +
-                                "-fx-border-radius: 5px;"
+                                    "-fx-border-width: 2px; " +
+                                            "-fx-border-color: #ffcc00; " +
+                                            "-fx-border-radius: 5px;"
                             );
                         }
                     }
@@ -243,6 +250,7 @@ public class VueJoueurActif extends VBox {
         conteneurAutresCartes.getChildren().add(panneauAutresCartes);
 
         // ajouter les cartes
+        List<Node> cartesAAjouter = new ArrayList<>();
         autresCartes.forEach(carte -> {
             String imagePath = "/images/cartes/" + carte.getCode() + ".png";
             ImageView imageView = new ImageView();
@@ -277,26 +285,123 @@ public class VueJoueurActif extends VBox {
                 return;
             }
 
-            imageView.setStyle("-fx-cursor: hand;");
+            // verifier si la carte est une carte evolution
+            boolean estEvolutionJouable = false;
+            if (carte instanceof CartePokemonEvolution evoCarte) {
+                String baseName = evoCarte.getEvolutionDe();
+                // actif
+                IPokemon act = joueurActif.get().pokemonActifProperty().get();
+                if (act != null && act.getCartePokemon() != null && baseName.equals(act.getCartePokemon().getNom()) && act.getPeutEvoluer()) {
+                    estEvolutionJouable = true;
+                }
+                // banc
+                if (!estEvolutionJouable) {
+                    for (IPokemon p : joueurActif.get().getBanc()) {
+                        if (p != null && p.getCartePokemon() != null && baseName.equals(p.getCartePokemon().getNom()) && p.getPeutEvoluer()) {
+                            estEvolutionJouable = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (estEvolutionJouable) {
+                // colorier les cartes evolution disponible
+                imageView.setStyle("-fx-cursor: hand; -fx-effect: dropshadow(gaussian, #00ff00, 10, 0.5, 0, 0);");
+            } else {
+                imageView.setStyle("-fx-cursor: not-allowed; -fx-opacity: 0.5;");
+            }
+
+            final ICarte carteFinale = carte;
+            final boolean estEvolutionJouableFinale = estEvolutionJouable;
             imageView.setOnMouseClicked(evt -> {
-                jeu.uneCarteDeLaMainAEteChoisie(carte.getId());
-                placerMain();
-                placerBanc();
+                if (carteFinale instanceof CartePokemonEvolution) {
+                    if (!estEvolutionJouableFinale) {
+                        jeu.instructionProperty().set("Aucun pokemon ne peut evoluer avec cette carte");
+                        return;
+                    }
+                    // demarrer le processus d'evolution
+                    startEvolution((CartePokemonEvolution) carteFinale);
+                } else {
+                    // autre carte jouee directement
+                    jeu.uneCarteDeLaMainAEteChoisie(carteFinale.getId());
+                    placerMain();
+                    placerBanc();
+                }
             });
 
-            imageView.setOnMouseEntered(evt -> imageView.setOpacity(0.7));
+            imageView.setOnMouseEntered(evt -> {
+                if (!(carteFinale instanceof CartePokemonEvolution && !estEvolutionJouableFinale)) {
+                    imageView.setOpacity(0.7);
+                }
+            });
             imageView.setOnMouseExited(evt -> imageView.setOpacity(1.0));
 
-            panneauAutresCartes.getChildren().add(imageView);
+            // ajouter un indicateur visuel pour les cartes d'évolution
+            if (carte instanceof CartePokemonEvolution) {
+                VBox carteAvecIndicateur = new VBox();
+                carteAvecIndicateur.setAlignment(Pos.CENTER);
+
+                // Ajouter un indicateur "Évolution" en haut de la carte
+                Label indicateur = new Label("Évolution");
+                indicateur.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-padding: 2px 5px; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 5px;");
+
+                StackPane stackPane = new StackPane(imageView);
+                stackPane.setAlignment(Pos.TOP_CENTER);
+                stackPane.getChildren().add(indicateur);
+
+                carteAvecIndicateur.getChildren().add(stackPane);
+                cartesAAjouter.add(carteAvecIndicateur);
+            } else {
+                cartesAAjouter.add(imageView);
+            }
         });
 
-        // aout des conteneurs au panneau principal
-        if (!cartesEnergie.isEmpty()) {
-            panneauMain.getChildren().add(conteneurEnergies);
-        }
-        if (!autresCartes.isEmpty()) {
+        panneauAutresCartes.getChildren().addAll(cartesAAjouter);
+        if (!cartesAAjouter.isEmpty()) {
             panneauMain.getChildren().add(conteneurAutresCartes);
         }
+        panneauMain.getChildren().add(conteneurEnergies);
+    }
+
+    // lance la phase de choix du pokemon a evoluer
+    private void startEvolution(CartePokemonEvolution carte) {
+        evoliutionEnCours = true;
+        carteIdEvolution = carte.getId();
+        evoltionBN = carte.getEvolutionDe();
+        jeu.instructionProperty().set("choisissez le pokemon a evoluer");
+        highlightEligiblePokemon();
+    }
+
+    // met en surbrillance les pokemons compatibles et gère la sélection
+    private void highlightEligiblePokemon() {
+        // actif
+        if (pokemonActif.getGraphic() instanceof Pane pane && joueurActif.get() != null) {
+            IPokemon p = joueurActif.get().pokemonActifProperty().get();
+            if (p != null && p.getCartePokemon() != null && p.getCartePokemon().getNom().equals(evoltionBN) && p.getPeutEvoluer()) {
+                pane.setStyle("-fx-border-width:2px;-fx-border-color:#ffcc00;-fx-border-radius:5px;");
+                // pane.setOnMouseClicked(e -> {
+                //     joueurActif.get().getEtatCourant().carteChoisie(p.getCartePokemon().getId());
+                //     resetEvolutionSelection();
+                // });
+            }
+        }
+        // banc
+        for (Node node : panneauBanc.getChildren()) {
+            if (node instanceof VBox vb && vb.getUserData() instanceof IPokemon p) {
+                if (p.getCartePokemon() != null && p.getCartePokemon().getNom().equals(evoltionBN) && p.getPeutEvoluer()) {
+                    vb.setStyle("-fx-border-width:2px;-fx-border-color:#ffcc00;-fx-border-radius:5px;");
+                }
+            }
+        }
+    }
+
+    // reset selection et styles
+    private void resetEvolutionSelection() {
+        evoliutionEnCours = false;
+        carteIdEvolution = null;
+        evoltionBN = null;
+        reinitialiserStyles();
     }
 
     private void placerBanc() {
@@ -306,10 +411,11 @@ public class VueJoueurActif extends VBox {
             return;
         }
 
-        // nombre max empalcement
+        // nombre max d'emplacements
         int nombreEmplacementsBanc = 5;
+        List<? extends IPokemon> banc = new ArrayList<>(joueurActif.get().getBanc());
 
-        // un boutton pour chaque emplacement
+        // créer un emplacement pour chaque position
         for (int i = 0; i < nombreEmplacementsBanc; i++) {
             VBox emplacement = new VBox();
             emplacement.setAlignment(Pos.CENTER);
@@ -321,36 +427,50 @@ public class VueJoueurActif extends VBox {
                             "-fx-min-height: 40px;"
             );
 
-            // verfie qu'il n'y a pas de pokemon a cet emplacement
-            List<? extends IPokemon> banc = new ArrayList<>(joueurActif.get().getBanc());
+            // ajouter le Pokémon s'il existe à cette position
             if (i < banc.size() && banc.get(i) != null) {
                 IPokemon pokemon = banc.get(i);
-                String nomPokemon = (pokemon.getCartePokemon() != null) ?
-                        pokemon.getCartePokemon().getNom() : "Pokémon " + (i + 1);
+                boolean highlight = pokemon.getCartePokemon() != null &&
+                        pokemon.getCartePokemon().getNom().equals(evoltionBN);
 
-                // afficher le pv avec le
-                String pvText = String.format("%s\nPV: %d",
-                        nomPokemon,
-                        pokemon.pointsDeVieProperty() != null ? pokemon.pointsDeVieProperty().get() : 0);
+                int index = i; // Capture de l'index dans une variable finale
+                VuePokemon vue = new VuePokemon(pokemon, false, highlight, () -> {
+                    // si on est en mode évolution
+                    if (evoliutionEnCours) {
+                        // ssi c'est un Pokémon du banc
+                        if (pokemon != joueurActif.get().pokemonActifProperty().get()) {
 
-                Label lblPokemon = new Label(pvText);
-                lblPokemon.setStyle(
-                        "-fx-font-size: 12px; " +
-                                "-fx-font-weight: bold; " +
-                                "-fx-text-alignment: center;"
-                );
-                lblPokemon.setWrapText(true);
-                lblPokemon.setMaxWidth(80);
-                emplacement.getChildren().add(lblPokemon);
+                            joueurActif.get().getEtatCourant().carteChoisie(pokemon.getCartePokemon().getId());
+                            resetEvolutionSelection();
+                        }
+                    }
+                    // Si on est en mode pour attacher les energies
+                    else if (idCarteEnergieSelectionnee != null) {
+                        try {
+                            jeu.uneCarteEnergieAEteChoisie(idCarteEnergieSelectionnee);
+                            jeu.instructionProperty().set("Énergie attachée avec succès !");
+                        } catch (Exception ex) {
+                            System.err.println("Erreur lors de l'attachement de l'énergie: " + ex.getMessage());
+                            jeu.instructionProperty().set("Erreur lors de l'attachement de l'énergie !");
+                        } finally {
+                            idCarteEnergieSelectionnee = null;
+                            placerMain();
+                            placerBanc();
+                        }
+                    }
+                    // si on est en mode échange
+                    else if (joueurActif.get() != null && joueurActif.get().pokemonActifProperty().get() != null) {
 
-                // metre a jour avec un listener( si les pv changent le texte aussi)
-                if (pokemon.pointsDeVieProperty() != null) {
-                    pokemon.pointsDeVieProperty().addListener((obs, oldVal, newVal) -> {
-                        lblPokemon.setText(String.format("%s\nPV: %d", nomPokemon, newVal));
-                    });
-                }
+                        jeu.unEmplacementVideDuBancAEteChoisi(String.valueOf(index));
+
+
+                    }
+                });
+                emplacement.setUserData(pokemon);
+                emplacement.getChildren().add(vue);
             } else {
-                // un boutton clickeable
+                emplacement.setUserData(null);
+
                 Button btnEmplacement = new Button("Emplacement " + (i + 1));
                 btnEmplacement.setStyle(
                         "-fx-font-size: 10px;" +
@@ -368,6 +488,7 @@ public class VueJoueurActif extends VBox {
 
                 emplacement.getChildren().add(btnEmplacement);
             }
+
             panneauBanc.getChildren().add(emplacement);
         }
     }
@@ -380,63 +501,47 @@ public class VueJoueurActif extends VBox {
                     jeu.instructionProperty().set("Aucun Pokémon actif sélectionné !");
                     return;
                 }
-                
-                // verifier si l'énergie est toujours compatible (au cas où l'état a changé)
+
+                // vérifier si l'énergie est toujours compatible (au cas où l'état a changé)
                 if (!cartesEnergieCompatibles.contains(idCarteEnergieSelectionnee)) {
                     jeu.instructionProperty().set("Cette énergie n'est plus compatible !");
                     idCarteEnergieSelectionnee = null;
-                    reinitialiserStyles();
                     return;
                 }
 
                 System.out.println("Tentative d'attachement de l'énergie: " + idCarteEnergieSelectionnee);
 
                 try {
-                    // appeler la méthode pour attacher l'énergie
                     jeu.uneCarteEnergieAEteChoisie(idCarteEnergieSelectionnee);
-
-                    // mettre à jour le message de succès
                     jeu.instructionProperty().set("Énergie attachée avec succès !");
-
-                    // mettre en surbrillance le Pokémon pour confirmer l'action
-                    if (pokemonActif.getGraphic() != null) {
-                        Node graphic = pokemonActif.getGraphic();
-                        if (graphic instanceof Pane) {
-                            graphic.setStyle(
-                                    "-fx-border-width: 2px; " +
-                                            "-fx-border-color: #00cc00; " +
-                                            "-fx-border-radius: 5px;"
-                            );
-
-                            // reinitialiser le style après 1 seconde
-                            new java.util.Timer().schedule(
-                                    new java.util.TimerTask() {
-                                        @Override
-                                        public void run() {
-                                            javafx.application.Platform.runLater(() -> {
-                                                graphic.setStyle("-fx-border-width: 0;");
-                                            });
-                                        }
-                                    },
-                                    1000
-                            );
-                        }
-                    }
-
                 } catch (Exception ex) {
                     System.err.println("Erreur lors de l'attachement de l'énergie: " + ex.getMessage());
                     jeu.instructionProperty().set("Erreur lors de l'attachement de l'énergie !");
                 } finally {
-                    // rnitialiser la sélection dans tous les cas
                     idCarteEnergieSelectionnee = null;
-
-                    // update l'interface
-                    placerPokemonActif();
                     placerMain();
+                }
+            } else if (evoliutionEnCours && joueurActif.get() != null && joueurActif.get().pokemonActifProperty().get() != null) {
+                IPokemon p = joueurActif.get().pokemonActifProperty().get();
+                if (p.getCartePokemon() != null && p.getCartePokemon().getNom().equals(evoltionBN)) {
+                    jeu.uneCarteDeLaMainAEteChoisie(p.getCartePokemon().getId());
+                    resetEvolutionSelection();
+                    placerMain();
+                    placerBanc();
+                }
+            } else if (joueurActif.get() != null && joueurActif.get().pokemonActifProperty().get() != null) {
+                // Mettre en mode échange
+                jeu.instructionProperty().set("Cliquez sur un Pokémon du banc pour échanger");
+
+                // Ajouter un style temporaire pour indiquer le mode échange
+                if (pokemonActif.getGraphic() instanceof Pane pane) {
+                    pane.setStyle("-fx-border-width:2px;-fx-border-color:#4CAF50;-fx-border-radius:5px;");
                 }
             }
         });
     }
+
+
 
     private void placerPokemonActif() {
         panneauEnergies.getChildren().clear();
@@ -463,7 +568,7 @@ public class VueJoueurActif extends VBox {
         }
 
         IPokemon poke = joueurActif.get().pokemonActifProperty().get();
-        String nomPokemon = (poke.getCartePokemon() != null && poke.getCartePokemon().getNom() != null) ?
+        String nomPokemon = (poke.getCartePokemon() != null) ?
                 poke.getCartePokemon().getNom() : "Pokémon Actif";
 
         // creer un conteneur pour l'image et les infos du Pokémon
@@ -519,8 +624,13 @@ public class VueJoueurActif extends VBox {
                                 "-fx-border-radius: 3;"
                 );
                 btnAttaque.setOnAction(e -> {
-                    System.out.println("Attaque utilisée : " + attaque);
-                    jeu.uneAttaqueAEteChoisie(attaque);
+                    // verifier si l'attaque existe
+                    if (poke.attaquesProperty() != null && poke.attaquesProperty().contains(attaque)) {
+                        System.out.println("Attaque utilisée : " + attaque);
+                        jeu.uneAttaqueAEteChoisie(attaque);
+                    } else {
+                        jeu.instructionProperty().set("Cette attaque n'est pas disponible !");
+                    }
                 });
                 attaquesBox.getChildren().add(btnAttaque);
             });
@@ -577,16 +687,16 @@ public class VueJoueurActif extends VBox {
                 graphic.setStyle("-fx-border-width: 0;");
             }
         }
-        
+
         // Réinitialiser le style des Pokémon du banc
         for (Node node : panneauBanc.getChildren()) {
             if (node instanceof VBox) {
                 node.setStyle(
-                    "-fx-border-color: #999;" +
-                    "-fx-border-radius: 5;" +
-                    "-fx-padding: 5px;" +
-                    "-fx-min-width: 80px;" +
-                    "-fx-min-height: 40px;"
+                        "-fx-border-color: #999;" +
+                                "-fx-border-radius: 5;" +
+                                "-fx-padding: 5px;" +
+                                "-fx-min-width: 80px;" +
+                                "-fx-min-height: 40px;"
                 );
             }
         }
