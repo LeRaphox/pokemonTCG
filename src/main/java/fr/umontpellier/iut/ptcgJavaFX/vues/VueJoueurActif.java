@@ -24,6 +24,7 @@ import javafx.scene.layout.StackPane;
 import static java.util.Comparator.comparing;
 
 import fr.umontpellier.iut.ptcgJavaFX.mecanique.cartes.pokemon.CartePokemonEvolution;
+import javafx.collections.MapChangeListener;
 
 public class VueJoueurActif extends VBox {
     private String idCarteEnergieSelectionnee = null;
@@ -39,7 +40,7 @@ public class VueJoueurActif extends VBox {
     private ObjectProperty<? extends IJoueur> joueurActif;
     private IJeu jeu;
 
-    private VueResultats vueResultat; // a initialiser avec le bon PokemonTCGIHM
+    private VueResultats vueResultat; // à initialiser avec le bon PokemonTCGIHM
 
     public void setJoueur(IJoueur joueur) {
         this.joueurActif = jeu.joueurActifProperty();
@@ -85,6 +86,8 @@ public class VueJoueurActif extends VBox {
             placerMain();
             placerPokemonActif();
             placerBanc();
+            // ajouter un listener sur l'energgie du pokemon actif
+            setListenerChangementEnergie(joueurActif.get().pokemonActifProperty().get());
         } else {
             nomDuJoueur.setText("");
             panneauMain.getChildren().clear();
@@ -101,6 +104,8 @@ public class VueJoueurActif extends VBox {
                 placerMain();
                 placerBanc();
                 placerPokemonActif();
+                // idem
+                setListenerChangementEnergie(newJoueur.pokemonActifProperty().get());
             } else {
                 nomDuJoueur.setText("");
                 panneauMain.getChildren().clear();
@@ -114,15 +119,32 @@ public class VueJoueurActif extends VBox {
         joueur.getMain().addListener((ListChangeListener<ICarte>) change -> placerMain());
     }
 
+    private void setListenerChangementBanc(IJoueur joueur) {
+        joueur.getBanc().addListener((ListChangeListener<IPokemon>) change -> placerBanc());
+    }
+
+    private void setListenerChangementEnergie(IPokemon pokemon) {
+        if (pokemon != null && pokemon.energieProperty() != null) {
+            pokemon.energieProperty().addListener((MapChangeListener<? super String, ? super List<String>>) change -> {
+                if (pokemon == joueurActif.get().pokemonActifProperty().get()) {
+                    placerPokemonActif();
+                } else {
+                    // metre a jour le pokmeon
+                    placerBanc();
+                }
+            });
+        }
+    }
+
     private boolean estEnergieCompatible(ICarte carteEnergie) {
         if (carteEnergie.getTypeEnergie() == null) return false;
 
-        // verifier la compatibilité avec le Pokémon actif
+        // vérifier la compatibilité avec le Pokémon actif
         if (joueurActif.get().pokemonActifProperty().get() != null) {
-            return true; // simplification: on suppose que tout Pokémon peut recevoir n'importe quelle énergie
+            return true; // simplification : on suppose que tout Pokémon peut recevoir n'importe quelle énergie
         }
 
-        // verifier la compatibilité avec les Pokémon sur le banc
+        // vérifier la compatibilité avec les Pokémon sur le banc
         for (IPokemon pokemon : joueurActif.get().getBanc()) {
             if (pokemon != null) {
                 return true; // on suppose que tout Pokémon peut recevoir n'importe quelle énergie
@@ -139,7 +161,7 @@ public class VueJoueurActif extends VBox {
             return;
         }
 
-        // creation d'une copie
+        // création d'une copie
         List<? extends ICarte> main = new ArrayList<>(joueurActif.get().getMain());
         main.sort(comparing(ICarte::getNom));
 
@@ -152,12 +174,12 @@ public class VueJoueurActif extends VBox {
                 .filter(c -> c.getTypeEnergie() == null)
                 .collect(Collectors.toList());
 
-        // mise a jour de la liste des energies compatibles
+        // mise à jour de la liste des énergies compatibles
         cartesEnergieCompatibles = cartesEnergie.stream()
                 .filter(this::estEnergieCompatible)
                 .map(ICarte::getId)
                 .collect(Collectors.toList());
-        // creer un contener avec les energies
+        // créer un conteneur avec les énergies
         VBox conteneurEnergies = new VBox(5);
         conteneurEnergies.setStyle("-fx-padding: 5px; -fx-background-color: #ffffff; -fx-border-color: #999; -fx-border-radius: 5;");
         Label titreEnergies = new Label("Énergies disponibles:");
@@ -168,7 +190,7 @@ public class VueJoueurActif extends VBox {
         panneauEnergies.setAlignment(Pos.CENTER_LEFT);
         conteneurEnergies.getChildren().add(panneauEnergies);
 
-        // ajouter les energies
+        // ajouter les énergies
         cartesEnergie.forEach(carte -> {
             String imagePath = "/images/cartes/" + carte.getCode() + ".png";
             ImageView imageView = new ImageView();
@@ -191,7 +213,7 @@ public class VueJoueurActif extends VBox {
                 return;
             }
 
-            // verifier si l'énergie est compatible avec au moins un Pokémon
+            // vérifier si l'énergie est compatible avec au moins un Pokémon
             boolean estCompatible = cartesEnergieCompatibles.contains(carte.getId());
 
             // Appliquer un style différent pour compatibilité
@@ -238,7 +260,7 @@ public class VueJoueurActif extends VBox {
             panneauEnergies.getChildren().add(imageView);
         });
 
-        //conteneur pour els autres cartes
+        //conteneur pour les autres cartes
         VBox conteneurAutresCartes = new VBox(5);
         conteneurAutresCartes.setStyle("-fx-padding: 5px; -fx-background-color: #f8f8f8; -fx-border-color: #999; -fx-border-radius: 5;");
         Label titreAutresCartes = new Label("Autres cartes:");
@@ -285,7 +307,7 @@ public class VueJoueurActif extends VBox {
                 return;
             }
 
-            // verifier si la carte est une carte evolution
+            // vérifier si la carte est une carte évolution
             boolean estEvolutionJouable = false;
             if (carte instanceof CartePokemonEvolution evoCarte) {
                 String baseName = evoCarte.getEvolutionDe();
@@ -306,7 +328,7 @@ public class VueJoueurActif extends VBox {
             }
 
             if (estEvolutionJouable) {
-                // colorier les cartes evolution disponible
+                // colorier les cartes évolution disponibles
                 imageView.setStyle("-fx-cursor: hand; -fx-effect: dropshadow(gaussian, #00ff00, 10, 0.5, 0, 0);");
             } else {
                 imageView.setStyle("-fx-cursor: not-allowed; -fx-opacity: 0.5;");
@@ -320,10 +342,10 @@ public class VueJoueurActif extends VBox {
                         jeu.instructionProperty().set("Aucun pokemon ne peut evoluer avec cette carte");
                         return;
                     }
-                    // demarrer le processus d'evolution
+                    // démarrer le processus d'évolution
                     startEvolution((CartePokemonEvolution) carteFinale);
                 } else {
-                    // autre carte jouee directement
+                    // autre carte jouée directement
                     jeu.uneCarteDeLaMainAEteChoisie(carteFinale.getId());
                     placerMain();
                     placerBanc();
@@ -364,7 +386,7 @@ public class VueJoueurActif extends VBox {
         panneauMain.getChildren().add(conteneurEnergies);
     }
 
-    // lance la phase de choix du pokemon a evoluer
+    // lance la phase de choix du pokémon à évoluer
     private void startEvolution(CartePokemonEvolution carte) {
         evoliutionEnCours = true;
         carteIdEvolution = carte.getId();
@@ -373,7 +395,7 @@ public class VueJoueurActif extends VBox {
         highlightEligiblePokemon();
     }
 
-    // met en surbrillance les pokemons compatibles et gère la sélection
+    // met en surbrillance les pokémons compatibles et gère la sélection
     private void highlightEligiblePokemon() {
         // actif
         if (pokemonActif.getGraphic() instanceof Pane pane && joueurActif.get() != null) {
@@ -396,7 +418,7 @@ public class VueJoueurActif extends VBox {
         }
     }
 
-    // reset selection et styles
+    // réinitialiser la sélection et les styles
     private void resetEvolutionSelection() {
         evoliutionEnCours = false;
         carteIdEvolution = null;
@@ -444,18 +466,17 @@ public class VueJoueurActif extends VBox {
                             resetEvolutionSelection();
                         }
                     }
-                    // Si on est en mode pour attacher les energies
+                    // Si on est en mode pour attacher les énergies
                     else if (idCarteEnergieSelectionnee != null) {
                         try {
                             jeu.uneCarteEnergieAEteChoisie(idCarteEnergieSelectionnee);
                             jeu.instructionProperty().set("Énergie attachée avec succès !");
+                            placerPokemonActif();
                         } catch (Exception ex) {
                             System.err.println("Erreur lors de l'attachement de l'énergie: " + ex.getMessage());
                             jeu.instructionProperty().set("Erreur lors de l'attachement de l'énergie !");
                         } finally {
                             idCarteEnergieSelectionnee = null;
-                            placerMain();
-                            placerBanc();
                         }
                     }
                     // si on est en mode échange
@@ -514,12 +535,13 @@ public class VueJoueurActif extends VBox {
                 try {
                     jeu.uneCarteEnergieAEteChoisie(idCarteEnergieSelectionnee);
                     jeu.instructionProperty().set("Énergie attachée avec succès !");
+                    // emtre a jour l'affichage inmediatement
+                    placerPokemonActif();
                 } catch (Exception ex) {
                     System.err.println("Erreur lors de l'attachement de l'énergie: " + ex.getMessage());
                     jeu.instructionProperty().set("Erreur lors de l'attachement de l'énergie !");
                 } finally {
                     idCarteEnergieSelectionnee = null;
-                    placerMain();
                 }
             } else if (evoliutionEnCours && joueurActif.get() != null && joueurActif.get().pokemonActifProperty().get() != null) {
                 IPokemon p = joueurActif.get().pokemonActifProperty().get();
@@ -550,7 +572,7 @@ public class VueJoueurActif extends VBox {
         pokemonActif.setGraphic(null);
         pokemonActif.setText("");
 
-        // reset le style du Pokémon actif
+        // réinitialiser le style du Pokémon actif
         if (pokemonActif.getGraphic() != null) {
             Node graphic = pokemonActif.getGraphic();
             if (graphic instanceof Pane) {
@@ -571,7 +593,7 @@ public class VueJoueurActif extends VBox {
         String nomPokemon = (poke.getCartePokemon() != null) ?
                 poke.getCartePokemon().getNom() : "Pokémon Actif";
 
-        // creer un conteneur pour l'image et les infos du Pokémon
+        // créer un conteneur pour l'image et les infos du Pokémon
         VBox pokemonContainer = new VBox(5);
         pokemonContainer.setAlignment(Pos.CENTER);
 
@@ -589,7 +611,7 @@ public class VueJoueurActif extends VBox {
             System.err.println("er chargmt: " + e.getMessage());
         }
 
-        // afficher la vie et le nom du pokemon
+        // afficher la vie et le nom du pokémon
 
         Label nomLabel = new Label(nomPokemon);
         nomLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
@@ -606,7 +628,7 @@ public class VueJoueurActif extends VBox {
         pokemonContainer.getChildren().addAll(nomLabel, pvLabel);
         pokemonActif.setGraphic(pokemonContainer);
 
-        // affiche les attaques disponible
+        // afficher les attaques disponibles
         if (poke.attaquesProperty() != null && !poke.attaquesProperty().isEmpty()) {
             VBox attaquesBox = new VBox(5);
             attaquesBox.setStyle("-fx-padding: 5px; -fx-background-color: #f0f0f0; -fx-border-color: #999; -fx-border-radius: 5;");
@@ -624,7 +646,7 @@ public class VueJoueurActif extends VBox {
                                 "-fx-border-radius: 3;"
                 );
                 btnAttaque.setOnAction(e -> {
-                    // verifier si l'attaque existe
+                    // vérifier si l'attaque existe
                     if (poke.attaquesProperty() != null && poke.attaquesProperty().contains(attaque)) {
                         System.out.println("Attaque utilisée : " + attaque);
                         jeu.uneAttaqueAEteChoisie(attaque);
@@ -640,7 +662,7 @@ public class VueJoueurActif extends VBox {
             this.getChildren().add(attaquesBox);
         }
 
-        // affiche les energies
+        // afficher les énergies
         if (poke.energieProperty() != null) {
             poke.energieProperty().forEach((type, energies) -> {
                 if (energies != null && !energies.isEmpty()) {
@@ -671,7 +693,7 @@ public class VueJoueurActif extends VBox {
             // Configurer l'écouteur du Pokémon actif une seule fois
             configurerEcouteurPokemonActif();
 
-            // Cvharger les styles
+            // Charger les styles
             getStylesheets().add(getClass().getResource("/css/vuejoueuractif.css").toExternalForm());
         } catch (IOException e) {
             e.printStackTrace();
@@ -702,26 +724,10 @@ public class VueJoueurActif extends VBox {
         }
     }
 
-    private void setListenerChangementBanc(IJoueur joueur) {
-        joueur.getBanc().addListener((ListChangeListener<? super IPokemon>) c -> {
-            if (joueur == joueurActif.get()) {
-                placerBanc();
-                placerMain(); // update la compatibilité des énergies
-            }
-        });
-        joueur.pokemonActifProperty().addListener((source, ancien, nouveau) -> {
-            if (joueur == joueurActif.get()) {
-                placerPokemonActif();
-                placerMain(); // update la compatibilité des énergies
-            }
-        });
-    }
-
     @FXML
     private void piocherCarte(javafx.event.ActionEvent event) {
         if (jeu != null && joueurActif != null && joueurActif.get() != null) {
             jeu.passerAEteChoisi();
-
             placerMain();
         }
     }

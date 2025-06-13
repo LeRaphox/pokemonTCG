@@ -1,6 +1,8 @@
 package fr.umontpellier.iut.ptcgJavaFX.vues;
 
 import fr.umontpellier.iut.ptcgJavaFX.IPokemon;
+import javafx.beans.InvalidationListener;
+import javafx.collections.MapChangeListener;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -10,6 +12,7 @@ import javafx.scene.layout.VBox;
 import javafx.geometry.Pos;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import java.util.List;
 
 public class VuePokemon extends Pane {
     private final IPokemon pokemon;
@@ -18,6 +21,21 @@ public class VuePokemon extends Pane {
     private final Runnable onClick;
     private ImageView imageView;
     private Label nom;
+
+    private static String getCouleurEnergie(String type) {
+        if (type == null) {
+            return "#cccccc";
+        }
+        return switch (type) {
+            case "FEU" -> "#ff9999";
+            case "EAU" -> "#99ccff";
+            case "PLANTE" -> "#99ff99";
+            case "ELECTRIQUE" -> "#ffff99";
+            case "PSY" -> "#ff99ff";
+            case "COMBAT" -> "#ffcc99";
+            default -> "#cccccc";
+        };
+    }
 
     public VuePokemon(IPokemon pokemon, boolean estActif, boolean highlight, Runnable onClick) {
         this.pokemon = pokemon;
@@ -70,14 +88,69 @@ public class VuePokemon extends Pane {
                     }
                     this.nom.setText(newCarte.getNom()); 
                 } else {
-
                     this.imageView.setImage(null);
                     this.nom.setText("?");
                 }
             });
         }
 
-        conteneur.getChildren().addAll(this.imageView, this.nom, pv);
+        // j'ajoute un listener pour les énergies
+        if (pokemon.energieProperty() != null) {
+            pokemon.energieProperty().addListener((MapChangeListener<? super String, ? super List<String>>) (change) -> {
+                // Mettre à jour l'affichage des énergies
+                VBox energieBox = new VBox(2);
+                energieBox.setAlignment(Pos.CENTER);
+                
+                pokemon.energieProperty().forEach((type, energies) -> {
+                    if (energies != null && !energies.isEmpty()) {
+                        Label lblEnergie = new Label(type + " (" + energies.size() + ")");
+                        lblEnergie.setStyle(
+                            "-fx-background-color: " + getCouleurEnergie(type) + ";" +
+                            "-fx-padding: 2px 8px;" +
+                            "-fx-margin: 0 3px;" +
+                            "-fx-border-radius: 10px;" +
+                            "-fx-background-radius: 10px;" +
+                            "-fx-text-fill: white;" +
+                            "-fx-font-size: 12px;" +
+                            "-fx-font-weight: bold;"
+                        );
+                        energieBox.getChildren().add(lblEnergie);
+                    }
+                });
+                
+                // Remplacer l'ancienne boîte d'énergies
+                VBox container = (VBox) getChildren().get(0);
+                if (container.getChildren().size() > 3) {
+                    container.getChildren().remove(3);
+                }
+                container.getChildren().add(energieBox);
+            });
+        }
+
+        // ajouter les énergies
+        VBox energieBox = new VBox(2);
+        energieBox.setAlignment(Pos.CENTER);
+        
+        if (pokemon.energieProperty() != null) {
+            pokemon.energieProperty().forEach((type, energies) -> {
+                if (energies != null && !energies.isEmpty()) {
+                    Label lblEnergie = new Label(type + " (" + energies.size() + ")");
+                    lblEnergie.setStyle(
+                        "-fx-background-color: " + getCouleurEnergie(type) + ";" +
+                        "-fx-padding: 2px 8px;" +
+                        "-fx-margin: 0 3px;" +
+                        "-fx-border-radius: 10px;" +
+                        "-fx-background-radius: 10px;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-size: 12px;" +
+                        "-fx-font-weight: bold;"
+                    );
+                    energieBox.getChildren().add(lblEnergie);
+                }
+            });
+        }
+
+        conteneur.getChildren().addAll(this.imageView, this.nom, pv, energieBox);
         
         // creeer le conteneur avec le style
         StackPane stack = new StackPane();
