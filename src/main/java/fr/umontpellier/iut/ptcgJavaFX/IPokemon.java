@@ -19,6 +19,5 @@ public interface IPokemon {
     BooleanProperty estProtegeEffetsAttaquesProperty();
 
     ICarte getCartePokemon();
-    boolean getPeutEvoluer();
 
 }

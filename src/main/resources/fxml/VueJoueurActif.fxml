@@ -1,30 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.control.Button?>
-<VBox xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1">
-    <children>
-        <Label fx:id="nomDuJoueur" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
-        <HBox spacing="10" alignment="CENTER_LEFT">
-            <Label text="Pokémon actif :" style="-fx-font-size: 16px;" />
-            <Button fx:id="pokemonActif" style="-fx-font-size: 18px;" />
-        </HBox>
-        <HBox spacing="5" alignment="CENTER_LEFT">
-            <Label text="Énergies :" style="-fx-font-size: 14px; -fx-text-fill: #666;" />
-            <HBox fx:id="panneauEnergies" spacing="3" alignment="CENTER_LEFT" />
-        </HBox>
 
-        <VBox spacing="5" style="-fx-padding: 5px; -fx-border-color: #999; -fx-border-width: 1px; -fx-border-radius: 5px; -fx-background-color: #f5f5f5;">
-            <Label text="Banc" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-padding: 0 0 5 0;" />
-            <HBox fx:id="panneauBanc" spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 5px; -fx-background-color: #eee; -fx-border-radius: 3px; -fx-min-height: 50px;" />
-        </VBox>
-        <VBox spacing="5" style="-fx-padding: 5px; -fx-border-color: #999; -fx-border-width: 1px; -fx-border-radius: 5px; -fx-background-color: #f5f5f5;">
-            <HBox spacing="10" alignment="CENTER_LEFT">
-                <Label text="Main" style="-fx-font-weight: bold; -fx-font-size: 14px;" />
-                <Button text="Piocher une carte" onAction="#piocherCarte" style="-fx-font-size: 12px; -fx-padding: 2px 8px;" />
-            </HBox>
-            <HBox fx:id="panneauMain" spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 5px; -fx-background-color: #eee; -fx-border-radius: 3px; -fx-min-height: 50px;" />
-        </VBox>
-    </children>
-</VBox>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Button?> <!-- Ligne ajoutée -->
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.geometry.Insets?>
+
+<fx:root type="javafx.scene.layout.VBox" xmlns:fx="http://javafx.com/fxml/1" spacing="10">
+    <padding>
+        <Insets top="10" right="10" bottom="10" left="10"/>
+    </padding>
+    <Label fx:id="nomDuJoueur" style="-fx-font-size: 18px;" text="Nom du Joueur"/>
+
+    <Label text="Banc:" style="-fx-font-size: 16px; -fx-font-weight: bold;">
+        <VBox.margin>
+            <Insets top="10"/>
+        </VBox.margin>
+    </Label>
+    <HBox fx:id="panneauBanc" spacing="5">
+        <!-- les boutons du banc seront ajoutés ici par le code java -->
+    </HBox>
+
+    <HBox spacing="10" alignment="TOP_CENTER"> <!-- Nouvelle HBox parente pour les deux types de cartes en main -->
+        <VBox.margin>
+            <Insets top="10"/>
+        </VBox.margin>
+        <children>
+            <VBox spacing="5" alignment="TOP_CENTER"> <!-- VBox pour Cartes Pokémon/Dresseur -->
+                <Label text="Cartes Pokémon et Dresseur:" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <HBox fx:id="panneauMain" spacing="5" alignment="CENTER">
+                    <!-- Les cartes Pokémon/Dresseur iront ici -->
+                </HBox>
+            </VBox>
+
+            <VBox spacing="5" alignment="TOP_CENTER"> <!-- VBox pour Cartes Énergie -->
+                <Label text="Cartes Énergie:" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <HBox fx:id="panneauEnergiesEnMain" spacing="5" alignment="CENTER">
+                    <!-- Les cartes Énergie iront ici -->
+                </HBox>
+            </VBox>
+        </children>
+    </HBox>
+    <!-- la section des attaques a ete deplacee vers vuedujeu.fxml -->
+</fx:root>

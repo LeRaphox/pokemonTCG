@@ -47,38 +47,4 @@ public class TourNormalSansRetraite extends EtatJoueur {
         joueur.setEtatCourant(new TourNormalSansRetraite(joueur));
     }
 
-    @Override
-    public void bancChoisi(String s) { // s est l'index du banc en string
-        if (joueur.getPokemonActif() == null) {
-            // Normalment ça ne devrais jamais arriver mais on verifie quand meme
-            return;
-        }
-
-        int index;
-        try {
-            index = Integer.parseInt(s);
-        } catch (NumberFormatException e) {
-            // ici si la transformation est pas possible
-            System.err.println("Format d'index du banc invalide : " + s);
-            return;
-        }
-
-        // je verifie si l'index est valide
-        if (index >= 0 && index < joueur.getBanc().size()) {
-            Pokemon pokemonToAdvance = (Pokemon) joueur.getBanc().get(index);
-            if (pokemonToAdvance != null) {
-                // j'echange
-                joueur.avancerPokemonDeBanc(pokemonToAdvance);
-
-                // j'autorise pas les autres actions
-                // je pars du principe qu'un echange ne fini pas un tour
-                joueur.setEtatCourant(new TourNormal(joueur));
-            } else {
-
-                // innutile car ça risque de surcharger l'ecran mais bon : getJeu().instructionProperty().setValue("t'as cliquer sur un emplacement vide");
-            }
-        } else {
-            //on ^peux aussi faire un petit message de debug mais pas necessaire
-        }
-    }
 }
