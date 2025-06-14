@@ -61,7 +61,6 @@ public class VueJoueurActif extends VBox {
     private boolean enModeSelectionCibleEnergie = false;
     private List<String> idsCartesChoisissables = List.of();
     private Map<String, MapChangeListener<String, List<String>>> listenersEnergiesBanc = new HashMap<>();
-    private boolean handInteractionsActive = true;
 
     public VueJoueurActif(VueDuJeu vueDuJeu, IJeu jeu, ObjectProperty<? extends IJoueur> joueurActifProperty) {
         this.vueDuJeu = vueDuJeu;
@@ -84,30 +83,19 @@ public class VueJoueurActif extends VBox {
             if (newJoueur != null) {
                 preparerListenersPourJoueur(newJoueur);
                 placerMain();
-                // placerBanc(); // Call to old bench rendering is now disabled by placerBanc itself
+                placerBanc();
             } else {
                 if (panneauMain != null) panneauMain.getChildren().clear();
                 if (panneauEnergiesEnMain != null) panneauEnergiesEnMain.getChildren().clear();
                 if (nomDuJoueur != null) nomDuJoueur.setText("en attente de joueur...");
-                if (panneauBanc != null) panneauBanc.getChildren().clear(); // Clear old bench UI
+                if (panneauBanc != null) panneauBanc.getChildren().clear();
                 informerModeAttachementEnergie(false, List.of());
-                listenersEnergiesBanc.clear(); // Clear listeners map when player is null
             }
-            placerBanc(); // This will now clear and return, effectively disabling the old bench
         };
 
         changementMainJoueurListener = change -> placerMain();
-        // The changementBancListener will still fire, but placerBanc() will handle it by returning early.
         changementBancListener = change -> placerBanc();
         bindJoueurActif();
-    }
-
-    public void setHandInteractionsActive(boolean active) {
-        boolean changed = this.handInteractionsActive != active;
-        this.handInteractionsActive = active;
-        if (changed) {
-            placerMain();
-        }
     }
 
     private void bindJoueurActif() {
@@ -121,9 +109,9 @@ public class VueJoueurActif extends VBox {
         setJoueurActifChangeListener();
         IJoueur joueurInitial = joueurActif.get();
         if (joueurInitial != null) {
-            preparerListenersPourJoueur(joueurInitial);
+            preparerListenersPourJoueur(joueurInitial); // Assurer que les listeners sont prêts pour le joueur initial
             placerMain();
-            placerBanc(); // Initial call, will clear and return
+            placerBanc();
         } else {
             if (panneauMain != null) panneauMain.getChildren().clear();
             if (panneauEnergiesEnMain != null) panneauEnergiesEnMain.getChildren().clear();
@@ -137,7 +125,7 @@ public class VueJoueurActif extends VBox {
 
     public void placerMain() {
         if (panneauMain == null) {
-            System.err.println("[VueJoueurActif] panneauMain est null dans placerMain().");
+
             return;
         }
         panneauMain.getChildren().clear();
@@ -164,35 +152,27 @@ public class VueJoueurActif extends VBox {
             cartePane.setOnMouseEntered(event -> cartePane.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 10, 0.5, 0.0, 0.0);"));
             cartePane.setOnMouseExited(event -> cartePane.setStyle(""));
 
-            if (!this.handInteractionsActive) {
-                cartePane.setOpacity(0.6);
-            } else {
-                cartePane.setOpacity(1.0);
-            }
-
             boolean estEnergie = carte.getNom().toLowerCase().contains("énergie") || carte.getCode().startsWith("TEUEner");
             final String idCarte = carte.getId();
 
             cartePane.setOnMouseClicked(event -> {
-                if (this.handInteractionsActive) {
-                    Carte carteMecaniqueInterne = Carte.get(idCarte);
-                    if (carteMecaniqueInterne instanceof CartePokemonEvolution) {
-                        CartePokemonEvolution carteEvo = (CartePokemonEvolution) carteMecaniqueInterne;
-                        Joueur joueurMecanique = (Joueur) joueurActif.get();
-                        if (carteEvo.peutJouer(joueurMecanique)) {
-                            if (vueDuJeu != null) {
-                                vueDuJeu.activerModeSelectionBasePourEvolution(carteEvo);
-                            } else {
-                                System.err.println("[VueJoueurActif] vueDuJeu est null, ne peut pas activer mode évolution.");
-                            }
+                Carte carteMecaniqueInterne = Carte.get(idCarte);
+                if (carteMecaniqueInterne instanceof CartePokemonEvolution) {
+                    CartePokemonEvolution carteEvo = (CartePokemonEvolution) carteMecaniqueInterne;
+                    Joueur joueurMecanique = (Joueur) joueurActif.get();
+                    if (carteEvo.peutJouer(joueurMecanique)) {
+
+                        if (vueDuJeu != null) {
+                            vueDuJeu.activerModeSelectionBasePourEvolution(carteEvo);
                         } else {
-                            this.jeu.uneCarteDeLaMainAEteChoisie(idCarte);
+
                         }
                     } else {
+
                         this.jeu.uneCarteDeLaMainAEteChoisie(idCarte);
                     }
-                } else {
-                    System.out.println("[VueJoueurActif] Clic sur carte en main ignoré (ID: " + idCarte + "); interactions désactivées.");
+                } else { // Inclut les énergies et autres types de cartes non-évolution
+                    this.jeu.uneCarteDeLaMainAEteChoisie(idCarte);
                 }
             });
 
@@ -207,18 +187,15 @@ public class VueJoueurActif extends VBox {
     public void preparerListenersPourJoueur(IJoueur joueur) {
         if (joueur != null) {
             joueur.getMain().addListener(this.changementMainJoueurListener);
-            // Detach old listener if any from old player's bench, though it might be complex
-            // if old player reference isn't readily available here.
-            // For now, new listener is added. If player instance changes, old listener might become inactive.
             joueur.getBanc().addListener(this.changementBancListener);
-            rafraichirAffichageCibles(); // This will call placerBanc which now returns early
+            rafraichirAffichageCibles();
         }
     }
 
     public void informerModeAttachementEnergie(boolean estActif, List<String> idsCiblesDuBanc) {
         this.enModeSelectionCibleEnergie = estActif;
         this.idsCartesChoisissables = estActif ? idsCiblesDuBanc : List.of();
-        rafraichirAffichageCibles(); // This will call placerBanc which now returns early
+        rafraichirAffichageCibles();
     }
 
     private Type getTypeFromLetter(String letter) {
@@ -229,14 +206,12 @@ public class VueJoueurActif extends VBox {
         return null;
     }
 
-    // This method is now largely unused as placerBanc returns early.
-    // Kept for structural integrity or if old bench needs to be re-enabled later.
     private void peuplerConteneurEnergies(IPokemon pokemon, HBox conteneurEnergies) {
         if (conteneurEnergies == null) return;
         conteneurEnergies.getChildren().clear();
         if (pokemon == null || pokemon.getCartePokemon() == null || pokemon.energieProperty() == null) return;
 
-        ObservableMap<String, List<String>> energiesMap = pokemon.energieProperty();
+        ObservableMap<String, List<String>> energiesMap = pokemon.energieProperty(); // Correction: suppression de .get() et changement de type
         if (energiesMap == null || energiesMap.isEmpty()) return;
 
         for (Map.Entry<String, List<String>> entry : energiesMap.entrySet()) {
@@ -273,25 +248,11 @@ public class VueJoueurActif extends VBox {
     }
 
     private void rafraichirAffichageCibles() {
-        // This method used to call placerBanc. Now placerBanc will handle its own early exit.
-        // System.out.println("[VueJoueurActif] Appel de rafraichirAffichageCibles(). Mode sélection énergie: " + enModeSelectionCibleEnergie);
-        placerBanc(); // Call will clear and return
+        System.out.println("[VueJoueurActif] Appel de rafraichirAffichageCibles(). Mode sélection énergie: " + enModeSelectionCibleEnergie);
+        placerBanc();
     }
 
     public void placerBanc() {
-        if (panneauBanc != null) {
-            panneauBanc.getChildren().clear(); // Clear any existing children
-        }
-        // Clear listeners associated with THIS VueJoueurActif's bench display
-        // It's important to iterate over a copy or manage removal carefully if modifying the map during iteration.
-        // However, since no new listeners are added if we return, just clearing is fine.
-        listenersEnergiesBanc.clear();
-
-        return; // Exit the method before any rendering logic for the old bench is executed.
-
-        // All the code below this line is now effectively disabled for the old bench display.
-        // It's kept for reference or if the old bench needs to be re-enabled.
-        /*
         if (panneauBanc == null) {
             System.err.println("[VueJoueurActif] ERREUR: panneauBanc est null!");
             return;
@@ -301,17 +262,162 @@ public class VueJoueurActif extends VBox {
             return;
         }
 
-        // ... (original content of placerBanc was here) ...
-        */
+        joueurActif.get().getBanc().forEach(pokemon -> {
+            if (pokemon != null && pokemon.getCartePokemon() != null) {
+                String pokemonId = pokemon.getCartePokemon().getId();
+                if (listenersEnergiesBanc.containsKey(pokemonId) && pokemon.energieProperty() != null) {
+                    pokemon.energieProperty().removeListener(listenersEnergiesBanc.get(pokemonId));
+                }
+            }
+        });
+        listenersEnergiesBanc.clear();
+
+        panneauBanc.getChildren().clear();
+        ObservableList<? extends IPokemon> banc = joueurActif.get().getBanc();
+        for (int i = 0; i < 5; i++) {
+            if (i < banc.size()) {
+                final IPokemon currentPokemonFinal = banc.get(i); // pokemon de la boucle
+                if (currentPokemonFinal != null) {
+                    final ICarte cartePokemonInterface = currentPokemonFinal.getCartePokemon(); // ICarte
+                    final String idCartePokemonFinal = cartePokemonInterface.getId();
+                    final int indexPokemonFinal = i;
+
+                    VBox pokemonAvecEnergiesContainer = new VBox(5);
+                    pokemonAvecEnergiesContainer.setAlignment(javafx.geometry.Pos.CENTER);
+
+                    Label pvLabelBanc = new Label();
+                    pvLabelBanc.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-background-color: rgba(255,255,255,0.7); -fx-padding: 1px 3px;");
+
+                    StringBinding pvBindingBanc = Bindings.createStringBinding(() -> {
+                        if (currentPokemonFinal != null && currentPokemonFinal.getCartePokemon() != null) {
+                            CartePokemon cartePkm = (CartePokemon) currentPokemonFinal.getCartePokemon();
+                            return String.format("%d/%d PV",
+                                    currentPokemonFinal.pointsDeVieProperty().get(),
+                                    cartePkm.getPointsVie());
+                        }
+                        return "--/-- PV";
+                    }, currentPokemonFinal.pointsDeVieProperty(), currentPokemonFinal.cartePokemonProperty());
+                    pvLabelBanc.textProperty().bind(pvBindingBanc);
+                    pokemonAvecEnergiesContainer.getChildren().add(pvLabelBanc);
+
+                    ImageView imageView = new ImageView();
+                    String imagePath = "/images/cartes/" + cartePokemonInterface.getCode() + ".png";
+                    InputStream imageStream = getClass().getResourceAsStream(imagePath);
+                    StackPane cartePane;
+
+                    if (imageStream == null) {
+                        System.err.println("[VueJoueurActif] image non trouvee: " + imagePath + " pour le pokemon sur le banc.");
+                        Label errorLabel = new Label("Img: " + cartePokemonInterface.getNom());
+                        cartePane = new StackPane(errorLabel);
+                        pokemonAvecEnergiesContainer.getChildren().add(cartePane);
+                    } else {
+                        Image img = new Image(imageStream);
+                        imageView.setImage(img);
+                        imageView.setPreserveRatio(true);
+                        imageView.setFitHeight(100);
+                        cartePane = new StackPane(imageView);
+                        pokemonAvecEnergiesContainer.getChildren().add(cartePane);
+                    }
+
+                    final HBox energiesPokemonBancHBox = new HBox(3);
+                    energiesPokemonBancHBox.setAlignment(javafx.geometry.Pos.CENTER);
+
+                    String stylePourCartePane = "";
+                    EventHandler<MouseEvent> clicHandlerPourCartePane; // Utiliser javafx.event.EventHandler
+
+                    boolean estCibleEvolutionValide = false;
+                    if (vueDuJeu != null && vueDuJeu.isModeSelectionBasePourEvolution() && vueDuJeu.getCarteEvolutionSelectionnee() != null && joueurActif.get() != null) {
+                        Joueur joueurMecanique = (Joueur) joueurActif.get();
+                        if (joueurMecanique != null) {
+                            List<String> ciblesValides = vueDuJeu.getCarteEvolutionSelectionnee().getChoixPossibles(joueurMecanique);
+                            if (ciblesValides.contains(idCartePokemonFinal)) {
+                                estCibleEvolutionValide = true;
+                                stylePourCartePane = "-fx-effect: dropshadow(gaussian, lawngreen, 20, 0.8, 0.0, 0.0); -fx-border-color: lawngreen; -fx-border-width: 4;";
+                            }
+                        }
+                    }
+
+                    if (estCibleEvolutionValide) {
+                        clicHandlerPourCartePane = event -> {
+                            System.out.println("[VueJoueurActif] Pokemon du banc (ID: " + idCartePokemonFinal + ") choisi comme base pour evolution.");
+                            vueDuJeu.pokemonDeBaseChoisiPourEvolution(idCartePokemonFinal);
+                        };
+                    } else if (vueDuJeu != null && vueDuJeu.isModeSelectionRemplacantApresRetraiteActif()) {
+                        clicHandlerPourCartePane = event -> {
+                            System.out.println("[VueJoueurActif] Clic sur Pokemon du banc (ID: " + idCartePokemonFinal + ") en MODE SELECTION REMPLACANT.");
+                            vueDuJeu.pokemonDuBancChoisiPourRemplacer(idCartePokemonFinal);
+                        };
+                    } else if (enModeSelectionCibleEnergie && idsCartesChoisissables.contains(idCartePokemonFinal)) {
+                        stylePourCartePane = "-fx-effect: dropshadow(gaussian, gold, 15, 0.7, 0.0, 0.0); -fx-border-color: gold; -fx-border-width: 3;";
+                        clicHandlerPourCartePane = event -> {
+                            System.out.println("[VueJoueurActif] Cible energie (Banc) choisie: " + cartePokemonInterface.getNom() + " (ID: " + idCartePokemonFinal + ")");
+                            this.jeu.uneCarteComplementaireAEteChoisie(idCartePokemonFinal);
+                            if (currentPokemonFinal != null && currentPokemonFinal.energieProperty() != null) {
+                                peuplerConteneurEnergies(currentPokemonFinal, energiesPokemonBancHBox);
+                            } else {
+                                placerBanc();
+                            }
+                        };
+                    } else {
+                        clicHandlerPourCartePane = event -> {
+                            if (vueDuJeu != null && vueDuJeu.isModeSelectionBasePourEvolution()){
+                                System.out.println("[VueJoueurActif] Clic sur Pokemon du banc (ID: " + idCartePokemonFinal + ") en mode evolution, mais NON VALIDE.");
+                            } else {
+                                System.out.println("Clic sur Pokémon du banc: " + cartePokemonInterface.getNom() + " à l'index " + indexPokemonFinal + " (aucun mode special actif pour ce pokemon).");
+                            }
+                        };
+                        // Appliquer l'effet de survol seulement si aucun autre style de mode n'est actif
+                        if (stylePourCartePane.isEmpty()) {
+                            cartePane.setOnMouseEntered(event -> cartePane.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 8, 0.4, 0.0, 0.0);"));
+                            cartePane.setOnMouseExited(event -> cartePane.setStyle(""));
+                        }
+                    }
+
+                    cartePane.setStyle(stylePourCartePane);
+                    cartePane.setOnMouseClicked(clicHandlerPourCartePane);
+
+                    pokemonAvecEnergiesContainer.getChildren().add(energiesPokemonBancHBox);
+                    peuplerConteneurEnergies(currentPokemonFinal, energiesPokemonBancHBox);
+
+                    String pokemonId = cartePokemonInterface.getId();
+                    if (listenersEnergiesBanc.containsKey(pokemonId) && currentPokemonFinal.energieProperty()!=null) {
+                        currentPokemonFinal.energieProperty().removeListener(listenersEnergiesBanc.get(pokemonId));
+                    }
+                    MapChangeListener<String, List<String>> listenerPourCePokemon = change -> {
+                        System.out.println("[VueJoueurActif] Changement d'énergies détecté pour Pokémon du banc: " + cartePokemonInterface.getNom());
+                        peuplerConteneurEnergies(currentPokemonFinal, energiesPokemonBancHBox);
+                    };
+                    if(currentPokemonFinal.energieProperty()!=null){
+                        currentPokemonFinal.energieProperty().addListener(listenerPourCePokemon);
+                        listenersEnergiesBanc.put(pokemonId, listenerPourCePokemon);
+                    }
+                    panneauBanc.getChildren().add(pokemonAvecEnergiesContainer);
+                } else { // pokemon est null
+                    Button boutonVide = new Button("Vide (null)");
+                    final int indexEmplacement = i;
+                    boutonVide.setUserData(String.valueOf(indexEmplacement));
+                    boutonVide.setOnAction(event -> this.jeu.unEmplacementVideDuBancAEteChoisi(String.valueOf(indexEmplacement)));
+                    boutonVide.setStyle("-fx-font-size: 18px;");
+                    boutonVide.setDisable(enModeSelectionCibleEnergie || (vueDuJeu != null && vueDuJeu.isModeSelectionBasePourEvolution()) || (vueDuJeu != null && vueDuJeu.isModeSelectionRemplacantApresRetraiteActif()));
+                    panneauBanc.getChildren().add(boutonVide);
+                }
+            } else { // emplacement vide
+                Button boutonVide = new Button("Vide");
+                final int indexEmplacement = i;
+                boutonVide.setUserData(String.valueOf(indexEmplacement));
+                boutonVide.setOnAction(event -> this.jeu.unEmplacementVideDuBancAEteChoisi(String.valueOf(indexEmplacement)));
+                boutonVide.setStyle("-fx-font-size: 18px;");
+                boutonVide.setDisable(enModeSelectionCibleEnergie || (vueDuJeu != null && vueDuJeu.isModeSelectionBasePourEvolution()) || (vueDuJeu != null && vueDuJeu.isModeSelectionRemplacantApresRetraiteActif()));
+                panneauBanc.getChildren().add(boutonVide);
+            }
+        }
     }
 
     public void setModeSelectionPourRemplacantApresRetraite(boolean estActif) {
-        // This method used to call placerBanc. Now placerBanc will handle its own early exit.
-        placerBanc(); // Call will clear and return
+        placerBanc();
     }
 
     public void rafraichirAffichagePourSelectionEvolution() {
-        // This method used to call placerBanc. Now placerBanc will handle its own early exit.
-        placerBanc(); // Call will clear and return
+        placerBanc();
     }
 }

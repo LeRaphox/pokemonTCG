@@ -101,12 +101,6 @@
                                     </HBox.margin>
                                 </VBox>
 
-                                <!-- MODIFIED: HBox pour le banc du joueur actif au centre, prefHeight attribute removed -->
-                                <HBox fx:id="bancJoueurActifCentreVBox" alignment="CENTER_LEFT" spacing="5">
-                                    <!-- Les cartes du banc (VBox par Pokemon) seront ajoutées ici par VueDuJeu.java -->
-                                    <!-- <Label text="Banc (Centre)" style="-fx-border-color: green; -fx-padding: 5;"/> -->
-                                </HBox>
-
                                 <!-- vbox pour la carte du pokemon actif du joueur, ses pv et ses energies -->
                                 <VBox fx:id="zoneCarteEtEnergiesVBox" alignment="CENTER" spacing="5">
                                     <children>
