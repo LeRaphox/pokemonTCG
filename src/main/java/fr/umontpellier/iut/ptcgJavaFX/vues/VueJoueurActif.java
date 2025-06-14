@@ -253,6 +253,9 @@ public class VueJoueurActif extends VBox {
     }
 
     public void placerBanc() {
+        String nomJoueurActifVueJoueur = (this.joueurActif != null && this.joueurActif.get() != null) ? this.joueurActif.get().getNom() : "null (dans VueJoueurActif)";
+        boolean modeRemplacantActifVueDuJeu = (vueDuJeu != null) ? vueDuJeu.isModeSelectionRemplacantApresRetraiteActif() : false;
+        System.out.println("[VueJoueurActif LOG] placerBanc(): Pour joueur = " + nomJoueurActifVueJoueur + ", vueDuJeu.isModeSelectionRemplacantApresRetraiteActif() = " + modeRemplacantActifVueDuJeu);
         if (panneauBanc == null) {
             System.err.println("[VueJoueurActif] ERREUR: panneauBanc est null!");
             return;
@@ -291,8 +294,9 @@ public class VueJoueurActif extends VBox {
                     StringBinding pvBindingBanc = Bindings.createStringBinding(() -> {
                         if (currentPokemonFinal != null && currentPokemonFinal.getCartePokemon() != null) {
                             CartePokemon cartePkm = (CartePokemon) currentPokemonFinal.getCartePokemon();
+                            // Afficher 0 PV si les PV sont négatifs
                             return String.format("%d/%d PV",
-                                    currentPokemonFinal.pointsDeVieProperty().get(),
+                                    Math.max(0, currentPokemonFinal.pointsDeVieProperty().get()),
                                     cartePkm.getPointsVie());
                         }
                         return "--/-- PV";
@@ -315,6 +319,14 @@ public class VueJoueurActif extends VBox {
                         imageView.setImage(img);
                         imageView.setPreserveRatio(true);
                         imageView.setFitHeight(100);
+
+                        // Appliquer le style KO si nécessaire au Pokémon du banc
+                        if (currentPokemonFinal.pointsDeVieProperty().get() <= 0) {
+                            imageView.setStyle("-fx-effect: grayscale(100%);");
+                        } else {
+                            imageView.setStyle(""); // Réinitialiser le style
+                        }
+
                         cartePane = new StackPane(imageView);
                         pokemonAvecEnergiesContainer.getChildren().add(cartePane);
                     }
@@ -324,6 +336,10 @@ public class VueJoueurActif extends VBox {
 
                     String stylePourCartePane = "";
                     EventHandler<MouseEvent> clicHandlerPourCartePane; // Utiliser javafx.event.EventHandler
+
+                    final String pokemonNomForLog = cartePokemonInterface.getNom(); // Log variable
+                    boolean conditionRemplacementLog = (vueDuJeu != null) && vueDuJeu.isModeSelectionRemplacantApresRetraiteActif(); // Log variable
+                    System.out.println("[VueJoueurActif LOG] placerBanc() loop for " + pokemonNomForLog + ": Check for Remplacant Handler. vueDuJeu.isModeSelectionRemplacantApresRetraiteActif() = " + conditionRemplacementLog);
 
                     boolean estCibleEvolutionValide = false;
                     if (vueDuJeu != null && vueDuJeu.isModeSelectionBasePourEvolution() && vueDuJeu.getCarteEvolutionSelectionnee() != null && joueurActif.get() != null) {
@@ -343,8 +359,9 @@ public class VueJoueurActif extends VBox {
                             vueDuJeu.pokemonDeBaseChoisiPourEvolution(idCartePokemonFinal);
                         };
                     } else if (vueDuJeu != null && vueDuJeu.isModeSelectionRemplacantApresRetraiteActif()) {
+                        System.out.println("[VueJoueurActif LOG] placerBanc() loop for " + pokemonNomForLog + ": ATTACHING Remplacant click handler.");
                         clicHandlerPourCartePane = event -> {
-                            System.out.println("[VueJoueurActif] Clic sur Pokemon du banc (ID: " + idCartePokemonFinal + ") en MODE SELECTION REMPLACANT.");
+                            System.out.println("[VueJoueurActif LOG] Remplacant Handler CLICKED for " + pokemonNomForLog + " on bench of " + this.joueurActif.get().getNom() + ". Mode active = " + vueDuJeu.isModeSelectionRemplacantApresRetraiteActif());
                             vueDuJeu.pokemonDuBancChoisiPourRemplacer(idCartePokemonFinal);
                         };
                     } else if (enModeSelectionCibleEnergie && idsCartesChoisissables.contains(idCartePokemonFinal)) {

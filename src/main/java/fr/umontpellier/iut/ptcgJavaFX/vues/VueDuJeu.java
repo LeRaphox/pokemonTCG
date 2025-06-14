@@ -84,6 +84,12 @@ public class VueDuJeu extends BorderPane {
 
     private ObjectProperty<IJoueur> adversaireProperty = new SimpleObjectProperty<>(null);
 
+    // Champs pour la limitation d'attaque
+    private int attaquesEffectueesCeTour = 0;
+    private boolean attaquePermise = true;
+
+    private boolean permettreChoixRemplacantPourAdversaireParJoueurActif = false;
+
 
     public VueDuJeu(IJeu jeu) {
         this.jeu = jeu;
@@ -145,8 +151,9 @@ public class VueDuJeu extends BorderPane {
                         return "--/-- PV";
                     }
                     CartePokemon cartePkm = (CartePokemon) pokemonActifObserveCourant.getCartePokemon();
+                    // Afficher 0 PV si les PV sont négatifs
                     return String.format("%d/%d PV",
-                            pokemonActifObserveCourant.pointsDeVieProperty().get(),
+                            Math.max(0, pokemonActifObserveCourant.pointsDeVieProperty().get()),
                             cartePkm.getPointsVie());
                 }, pokemonActifObserveCourant.pointsDeVieProperty(), pokemonActifObserveCourant.cartePokemonProperty());
                 pvPokemonActifLabel.textProperty().bind(pvBinding);
@@ -298,7 +305,29 @@ public class VueDuJeu extends BorderPane {
             Button boutonAttaque = new Button(nomAttaque);
             boutonAttaque.setMaxWidth(Double.MAX_VALUE);
             if (cliquable) {
-                boutonAttaque.setOnAction(event -> this.jeu.uneAttaqueAEteChoisie(nomAttaque));
+                boutonAttaque.setOnAction(event -> {
+                    if (this.attaquePermise) {
+                        this.jeu.uneAttaqueAEteChoisie(nomAttaque);
+                        this.attaquesEffectueesCeTour++;
+                        this.attaquePermise = false;
+                        // Rafraîchir l'affichage des attaques du joueur actif (pour désactiver les boutons)
+                        afficherAttaquesGenerique(pokemonActifObserveCourant, attaquesDisponiblesVBoxJeu, true);
+                        // Rafraîchir l'affichage des attaques de l'adversaire (au cas où)
+                        IJoueur adv = adversaireProperty.get();
+                        if (adv != null) {
+                            afficherAttaquesGenerique(adv.pokemonActifProperty().get(), attaquesAdversaireVBox, false);
+                        }
+                    } else {
+                        System.out.println("[VueDuJeu] Attaque non permise (déjà effectuée ou autre condition).");
+                        // Optionnel: afficher une alerte ou un message à l'utilisateur
+                        // Par exemple, décommenter la ligne suivante pour un message simple (attention aux instructions du jeu)
+                        // if(instructionLabel.textProperty().isBound()) instructionLabel.textProperty().unbind();
+                        // instructionLabel.setText("Une seule attaque par tour est permise.");
+                    }
+                });
+                if (!this.attaquePermise) {
+                    boutonAttaque.setDisable(true);
+                }
             } else {
                 boutonAttaque.setDisable(true);
                 boutonAttaque.setStyle("-fx-font-size: 11px; -fx-opacity: 0.8;");
@@ -311,6 +340,7 @@ public class VueDuJeu extends BorderPane {
     private void appliquerStyleGrandeCarteActive() {
         if (grandeCarteActiveView == null) return;
         String styleFinal = "";
+        // Logique existante pour les styles d'évolution et d'attachement d'énergie
         if (modeSelectionBasePourEvolution && carteEvolutionSelectionnee != null && idPokemonActifCourant_PourGrandeCarte != null && jeu.joueurActifProperty().get() != null) {
             fr.umontpellier.iut.ptcgJavaFX.mecanique.Joueur joueurMecanique = (fr.umontpellier.iut.ptcgJavaFX.mecanique.Joueur) jeu.joueurActifProperty().get();
             if (joueurMecanique != null && carteEvolutionSelectionnee != null) {
@@ -322,7 +352,16 @@ public class VueDuJeu extends BorderPane {
         } else if (estEnModeAttachementEnergie_Global && idPokemonActifCourant_PourGrandeCarte != null) {
             styleFinal = "-fx-effect: dropshadow(gaussian, gold, 15, 0.7, 0.0, 0.0); -fx-border-color: gold; -fx-border-width: 3;";
         }
-        grandeCarteActiveView.setStyle(styleFinal);
+
+        // Ajout du style KO si nécessaire
+        // Vérifier pokemonActifObserveCourant avant d'accéder à ses propriétés
+        if (pokemonActifObserveCourant != null && pokemonActifObserveCourant.pointsDeVieProperty().get() <= 0) {
+            if (!styleFinal.isEmpty() && !styleFinal.endsWith(";") && !styleFinal.endsWith(" ")) {
+                styleFinal += ";";
+            }
+            styleFinal += " -fx-effect: grayscale(100%);";
+        }
+        grandeCarteActiveView.setStyle(styleFinal.trim());
     }
 
     public void creerBindings() {
@@ -338,7 +377,9 @@ public class VueDuJeu extends BorderPane {
             boolean previousModePaiementRetraite = modePaiementCoutRetraiteActif;
             boolean previousModeSelectionRemplacant = modeSelectionRemplacantApresRetraiteActif;
             boolean previousModeAttachementEnergie = estEnModeAttachementEnergie_Global;
+            boolean previousAllowChoiceForOpponent = this.permettreChoixRemplacantPourAdversaireParJoueurActif;
 
+            this.permettreChoixRemplacantPourAdversaireParJoueurActif = false; // Reset by default
             modePaiementCoutRetraiteActif = false;
             modeSelectionRemplacantApresRetraiteActif = false;
             estEnModeAttachementEnergie_Global = false;
@@ -366,9 +407,72 @@ public class VueDuJeu extends BorderPane {
                 carteEvolutionSelectionnee = null;
                 coutRetraiteRestant = 0;
                 if (boutonEchangerPokemon != null) boutonEchangerPokemon.setDisable(true);
-                if (vueJoueurActif != null) {
-                    vueJoueurActif.setModeSelectionPourRemplacantApresRetraite(true);
+
+                IJoueur joueurActifAuMomentInstruction = jeu.joueurActifProperty().get();
+                IJoueur adversaireAuMomentInstruction = (joueurActifAuMomentInstruction != null) ? joueurActifAuMomentInstruction.getAdversaire() : null;
+                boolean advActifIsNull = adversaireAuMomentInstruction != null && adversaireAuMomentInstruction.pokemonActifProperty().get() == null;
+                boolean joueurActifPKMIsNull = joueurActifAuMomentInstruction != null && joueurActifAuMomentInstruction.pokemonActifProperty().get() == null;
+                System.out.println("[VueDuJeu LOG] instructionListener - 'choisissez...actif': JA=" + (joueurActifAuMomentInstruction != null ? joueurActifAuMomentInstruction.getNom() : "null") +
+                        ", AdvPKMActifNull=" + advActifIsNull +
+                        ", JAPKMActifNull=" + joueurActifPKMIsNull);
+                // START MODIFICATION
+                IJoueur joueurCourant = jeu.joueurActifProperty().get();
+                IJoueur adversaire = (joueurCourant != null) ? joueurCourant.getAdversaire() : null;
+
+                // Condition pour déterminer si l'adversaire doit choisir
+                boolean adversaireDoitChoisir = adversaire != null && adversaire.pokemonActifProperty().get() == null && joueurCourant != null && joueurCourant.pokemonActifProperty().get() != null;
+                // Condition pour déterminer si le joueur courant doit choisir
+                boolean joueurCourantDoitChoisir = joueurCourant != null && joueurCourant.pokemonActifProperty().get() == null;
+
+                // System.out.println("[VueDuJeu LOG] instructionListener - 'choisissez...actif': adversaireDoitChoisir = " + adversaireDoitChoisir + ", joueurCourantDoitChoisir = " + joueurCourantDoitChoisir);
+                // Commenting out the more granular logs from the previous plan, keeping the consolidated one above.
+
+                if (adversaireDoitChoisir) {
+                    System.out.println("[VueDuJeu] L'adversaire doit choisir un nouveau Pokémon actif.");
+                    if (instructionLabel.textProperty().isBound()) {
+                        instructionLabel.textProperty().unbind();
+                    }
+                    // instructionLabel.setText("L'adversaire doit choisir un nouveau Pokémon actif."); // Original
+                    instructionLabel.setText("L'adversaire doit choisir. Cliquez sur un Pokémon de son banc."); // Updated
+                    this.permettreChoixRemplacantPourAdversaireParJoueurActif = true;
+                    // System.out.println("[VueDuJeu LOG] instructionListener - 'choisissez...actif': Tentative de MAJ modeSelectionRemplacantApresRetraiteActif. Sera: " + false);
+                    modeSelectionRemplacantApresRetraiteActif = false; // L'adversaire choisit, pas le joueur actif via UI
+                    if (vueJoueurActif != null) {
+                        // System.out.println("[VueDuJeu LOG] instructionListener - 'choisissez...actif': Appel de vueJoueurActif.setModeSelectionPourRemplacantApresRetraite(" + false + ")");
+                        vueJoueurActif.setModeSelectionPourRemplacantApresRetraite(false);
+                    }
+                } else if (joueurCourantDoitChoisir) {
+                    System.out.println("[VueDuJeu] Le joueur courant doit choisir un nouveau Pokémon actif.");
+                    // Rétablir le binding si ce n'est pas déjà fait ou si l'instruction est spécifiquement pour le joueur courant
+                    if (!instructionLabel.textProperty().isBound()) {
+                        instructionLabel.textProperty().bind(jeu.instructionProperty()); // Re-bind si c'était unbind pour l'adversaire
+                    }
+                    // Assurez-vous que l'instruction est correcte pour le joueur actif si elle a été modifiée
+                    // jeu.instructionProperty().set("Choisissez un nouveau Pokémon actif."); // Déjà fait par le moteur de jeu
+                    // System.out.println("[VueDuJeu LOG] instructionListener - 'choisissez...actif': Tentative de MAJ modeSelectionRemplacantApresRetraiteActif. Sera: " + true);
+                    modeSelectionRemplacantApresRetraiteActif = true;
+                    if (vueJoueurActif != null) {
+                        // System.out.println("[VueDuJeu LOG] instructionListener - 'choisissez...actif': Appel de vueJoueurActif.setModeSelectionPourRemplacantApresRetraite(" + true + ")");
+                        vueJoueurActif.setModeSelectionPourRemplacantApresRetraite(true);
+                    }
+                } else {
+                    // Cas par défaut ou si aucun des deux n'a besoin de choisir (ne devrait pas arriver avec cette instruction)
+                    // ou si le binding original est toujours correct
+                    System.out.println("[VueDuJeu] Mode sélection remplaçant: ni joueur ni adversaire clairement identifié pour choix, ou état inattendu.");
+                    if (!instructionLabel.textProperty().isBound()) {
+                        instructionLabel.textProperty().bind(jeu.instructionProperty());
+                    }
+                    // System.out.println("[VueDuJeu LOG] instructionListener - 'choisissez...actif': Tentative de MAJ modeSelectionRemplacantApresRetraiteActif. Sera: " + true + " (défaut)");
+                    modeSelectionRemplacantApresRetraiteActif = true; // Comportement par défaut original
+                    if (vueJoueurActif != null) {
+                        // System.out.println("[VueDuJeu LOG] instructionListener - 'choisissez...actif': Appel de vueJoueurActif.setModeSelectionPourRemplacantApresRetraite(" + true + ") (défaut)");
+                        vueJoueurActif.setModeSelectionPourRemplacantApresRetraite(true);
+                    }
                 }
+                modeSelectionBasePourEvolution = false;
+                carteEvolutionSelectionnee = null;
+                coutRetraiteRestant = 0;
+                // END MODIFICATION
 
             } else if (instructionLower.equals("choisissez un pokémon à faire évoluer")) {
 
@@ -409,19 +513,35 @@ public class VueDuJeu extends BorderPane {
                 if (vueJoueurActif != null) {
                     if(previousModeSelectionRemplacant) vueJoueurActif.setModeSelectionPourRemplacantApresRetraite(false);
                     if(previousModeAttachementEnergie) vueJoueurActif.informerModeAttachementEnergie(false, List.of());
-                    if(etaitEnModeEvo) {
+                    if(etaitEnModeEvo) { // previousModeEvo refers to the state before this listener processed any instruction
                         vueJoueurActif.rafraichirAffichagePourSelectionEvolution();
                     }
                 }
             }
+
+            // If the mode for allowing opponent choice changed, refresh opponent's zone
+            if (previousAllowChoiceForOpponent && !this.permettreChoixRemplacantPourAdversaireParJoueurActif) {
+                mettreAJourZoneAdversaire();
+            }
+            // If the mode was just activated, ensure opponent's zone is updated to show clickable bench
+            if (this.permettreChoixRemplacantPourAdversaireParJoueurActif) {
+                mettreAJourZoneAdversaire();
+            }
+
             mettreAJourGrandeCarteActive();
         });
 
         this.jeu.joueurActifProperty().addListener((obs, oldJ, newJ) -> {
             if (newJ != null) {
+                System.out.println("[VueDuJeu LOG] joueurActifProperty Listener: Nouveau joueur actif = " + newJ.getNom());
+                // Réinitialisation pour le nouveau tour du joueur actif
+                this.attaquesEffectueesCeTour = 0;
+                this.attaquePermise = true;
+                System.out.println("[VueDuJeu] Nouveau tour pour " + newJ.getNom() + ". Attaques réinitialisées. attaquePermise: " + this.attaquePermise);
+
                 adversaireProperty.set(newJ.getAdversaire());
 
-
+                System.out.println("[VueDuJeu LOG] joueurActifProperty Listener: Préparation de vueJoueurActif pour " + newJ.getNom());
                 vueJoueurActif.preparerListenersPourJoueur(newJ);
                 vueJoueurActif.placerMain();
                 vueJoueurActif.placerBanc();
@@ -484,6 +604,7 @@ public class VueDuJeu extends BorderPane {
                 if (nbCartesDefausseJoueurActifLabel != null) { if(nbCartesDefausseJoueurActifLabel.textProperty().isBound()) nbCartesDefausseJoueurActifLabel.textProperty().unbind(); nbCartesDefausseJoueurActifLabel.setText("Défausse: --");}
                 if (nbRecompensesJoueurActifLabel != null) { if(nbRecompensesJoueurActifLabel.textProperty().isBound()) nbRecompensesJoueurActifLabel.textProperty().unbind(); nbRecompensesJoueurActifLabel.setText("Récompenses: -");}
             }
+            // mettreAJourGrandeCarteActive() est appelé plus bas, ce qui rafraîchira les boutons d'attaque.
             mettreAJourGrandeCarteActive();
             mettreAJourZoneAdversaire();
         });
@@ -780,6 +901,7 @@ public class VueDuJeu extends BorderPane {
         }
 
         IPokemon pokemonActifAdv = adversaire.pokemonActifProperty().get();
+
         if (pokemonActifAdversaireView != null && pvPokemonActifAdversaireLabel != null) {
             if (pokemonActifAdv != null && pokemonActifAdv.getCartePokemon() != null) {
                 String imagePath = "/images/cartes/" + pokemonActifAdv.getCartePokemon().getCode() + ".png";
@@ -791,11 +913,19 @@ public class VueDuJeu extends BorderPane {
                 if (pvPokemonActifAdversaireLabel.textProperty().isBound()) {
                     pvPokemonActifAdversaireLabel.textProperty().unbind();
                 }
+                // Afficher 0 PV si les PV sont négatifs pour l'adversaire
                 pvPokemonActifAdversaireLabel.setText(String.format("%d/%d PV",
-                        pokemonActifAdv.pointsDeVieProperty().get(),
+                        Math.max(0, pokemonActifAdv.pointsDeVieProperty().get()),
                         cartePkmAdv.getPointsVie()));
                 pvPokemonActifAdversaireLabel.setVisible(true);
                 pokemonActifAdversaireView.setVisible(true);
+
+                // Appliquer le style KO si nécessaire au Pokémon actif de l'adversaire
+                if (pokemonActifAdv.pointsDeVieProperty().get() <= 0) {
+                    pokemonActifAdversaireView.setStyle("-fx-effect: grayscale(100%);");
+                } else {
+                    pokemonActifAdversaireView.setStyle(""); // Réinitialiser le style
+                }
 
                 if (energiesPokemonActifAdversaireHBox != null) {
                     afficherEnergiesGenerique(pokemonActifAdv, energiesPokemonActifAdversaireHBox, false);
@@ -807,6 +937,7 @@ public class VueDuJeu extends BorderPane {
             } else {
                 pokemonActifAdversaireView.setImage(null);
                 pokemonActifAdversaireView.setVisible(false);
+                pokemonActifAdversaireView.setStyle(""); // Réinitialiser le style si pas de Pokémon
                 if (pvPokemonActifAdversaireLabel.textProperty().isBound()) {
                     pvPokemonActifAdversaireLabel.textProperty().unbind();
                 }
@@ -828,9 +959,43 @@ public class VueDuJeu extends BorderPane {
                         imgBancAdv.setImage(new Image(streamImgBanc));
                         imgBancAdv.setFitHeight(60);
                         imgBancAdv.setPreserveRatio(true);
+
+                        String currentStyle = "";
+                        // Appliquer le style KO si nécessaire
+                        if (pokemonBancAdv.pointsDeVieProperty().get() <= 0) {
+                            currentStyle = "-fx-effect: grayscale(100%);";
+                        } else {
+                            currentStyle = ""; // Base style if not KO
+                        }
+
+                        if (this.permettreChoixRemplacantPourAdversaireParJoueurActif && pokemonBancAdv.pointsDeVieProperty().get() > 0) { // Only allow choice of non-KO'd Pokemon
+                            final String idPokemonChoisi = pokemonBancAdv.getCartePokemon().getId();
+                            imgBancAdv.setOnMouseClicked(event -> {
+                                this.jeu.uneCarteComplementaireAEteChoisie(idPokemonChoisi);
+                                this.permettreChoixRemplacantPourAdversaireParJoueurActif = false; // Reset flag after choice
+                                // instructionLabel.textProperty().bind(jeu.instructionProperty()); // Rebind to game instruction
+                                if (!instructionLabel.textProperty().isBound()) { // Rebind if it was unbound
+                                    instructionLabel.textProperty().bind(jeu.instructionProperty());
+                                }
+                                mettreAJourZoneAdversaire(); // Refresh opponent's bench (remove clickability)
+                                mettreAJourGrandeCarteActive(); // Refresh current player's view
+                            });
+                            if (!currentStyle.isEmpty() && !currentStyle.endsWith(";")) currentStyle += ";";
+                            currentStyle += " -fx-border-color: blue; -fx-border-width: 2;"; // Clickable style
+                            imgBancAdv.setCursor(javafx.scene.Cursor.HAND);
+                        } else {
+                            imgBancAdv.setOnMouseClicked(null);
+                            imgBancAdv.setCursor(javafx.scene.Cursor.DEFAULT);
+                        }
+                        imgBancAdv.setStyle(currentStyle.trim());
                         bancAdversaireHBox.getChildren().add(imgBancAdv);
                     } else {
-                        bancAdversaireHBox.getChildren().add(new Label("Err"));
+                        Label errLabel = new Label("Err");
+                        // KO style for error label if underlying Pokemon is KO'd
+                        if (pokemonBancAdv != null && pokemonBancAdv.pointsDeVieProperty().get() <= 0) {
+                            errLabel.setStyle("-fx-effect: grayscale(100%);");
+                        }
+                        bancAdversaireHBox.getChildren().add(errLabel);
                     }
                 }
             }
@@ -872,4 +1037,3 @@ public class VueDuJeu extends BorderPane {
         }
     }
 }
-
